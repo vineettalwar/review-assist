@@ -19,6 +19,16 @@ AI providers (OpenRouter, Claude, ChatGPT) are connected by an admin in **Settin
 ## Deploy
 1. D1 `review-assist` + R2 `review-assist-uploads` (ids already in `wrangler.jsonc` for the sometechwork account).
 2. `bunx wrangler d1 migrations apply DB --remote`
-3. `bunx wrangler secret put SESSION_SECRET` (optionally `AI_KEYS_SECRET` and provider keys). Password login is local-only.
+3. Set encrypted Worker secrets (never put these in `wrangler.jsonc` `vars`):
+   ```bash
+   bunx wrangler secret put SESSION_SECRET      # required
+   bunx wrangler secret put ADMIN_PASSWORD      # password login until Access AUD is set
+   # optional AI keys (or connect them later in Admin → Settings):
+   bunx wrangler secret put OPENROUTER_API_KEY
+   # bunx wrangler secret put ANTHROPIC_API_KEY
+   # bunx wrangler secret put OPENAI_API_KEY
+   # bunx wrangler secret put AI_KEYS_SECRET     # encrypts Settings-stored keys; defaults to SESSION_SECRET
+   ```
+   Dashboard alternative: Workers → review-assist → Settings → Variables and Secrets → Encrypt.
 4. `bun run deploy` → https://review-assist.sometechwork.workers.dev
-5. Cloudflare Access protects `/admin*` (customer `/r/*` stays public). Set Worker secret `CF_ACCESS_AUD` to the Access app AUD tag after creating the app.
+5. Cloudflare Access protects `/admin*` (customer `/r/*` stays public). Set Worker secret `CF_ACCESS_AUD` to the Access app AUD tag after creating the app. Until `CF_ACCESS_AUD` is set, `/admin` uses password login via `ADMIN_PASSWORD`.
