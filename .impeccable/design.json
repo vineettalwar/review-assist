@@ -1,0 +1,386 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-17T19:45:19Z",
+  "title": "Design System: Review Assist",
+  "extensions": {
+    "colorMeta": {
+      "carbon": {
+        "role": "primary",
+        "displayName": "Carbon Blue",
+        "canonical": "#2346e0",
+        "tonalRamp": [
+          "#102065",
+          "#172e92",
+          "#1e3cbe",
+          "#2346e0",
+          "#657ee9",
+          "#9cacf1",
+          "#cfd6f8",
+          "#e9ecfc"
+        ]
+      },
+      "carbon-deep": {
+        "role": "primary",
+        "displayName": "Carbon Deep",
+        "canonical": "#1a37b8",
+        "tonalRamp": [
+          "#0c1953",
+          "#112478",
+          "#162f9c",
+          "#1a37b8",
+          "#5f73cd",
+          "#98a5df",
+          "#cdd3ef",
+          "#e8ebf8"
+        ]
+      },
+      "carbon-wash": {
+        "role": "primary",
+        "displayName": "Carbon Wash",
+        "canonical": "#e9eefb",
+        "tonalRamp": [
+          "#696b71",
+          "#979ba3",
+          "#c6cad5",
+          "#e9eefb",
+          "#f0f3fc",
+          "#f5f7fd",
+          "#fafbfe",
+          "#fdfdff"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Bond Paper",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#737373",
+          "#a6a6a6",
+          "#d9d9d9",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface",
+        "canonical": "#f6f7fa",
+        "tonalRamp": [
+          "#6f6f70",
+          "#a0a1a2",
+          "#d1d2d4",
+          "#f6f7fa",
+          "#f9f9fc",
+          "#fbfbfd",
+          "#fdfdfe",
+          "#fefefe"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#101522",
+        "tonalRamp": [
+          "#07090f",
+          "#0a0e16",
+          "#0e121d",
+          "#101522",
+          "#585b64",
+          "#93969c",
+          "#caccce",
+          "#e7e8e9"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Ink 2",
+        "canonical": "#4d5566",
+        "tonalRamp": [
+          "#23262e",
+          "#323742",
+          "#414857",
+          "#4d5566",
+          "#828894",
+          "#afb2ba",
+          "#d8dadd",
+          "#edeef0"
+        ]
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "Ink 3",
+        "canonical": "#646c7d",
+        "tonalRamp": [
+          "#2d3138",
+          "#414651",
+          "#555c6a",
+          "#646c7d",
+          "#9298a4",
+          "#b9bdc4",
+          "#dddfe2",
+          "#f0f0f2"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Rule",
+        "canonical": "#d4d9e4",
+        "tonalRamp": [
+          "#5f6267",
+          "#8a8d94",
+          "#b4b8c2",
+          "#d4d9e4",
+          "#e1e4ec",
+          "#eceef3",
+          "#f6f7f9",
+          "#fbfbfc"
+        ]
+      },
+      "ok": {
+        "role": "status",
+        "displayName": "Ok Green",
+        "canonical": "#0f7a4a",
+        "tonalRamp": [
+          "#073721",
+          "#0a4f30",
+          "#0d683f",
+          "#0f7a4a",
+          "#57a280",
+          "#93c3ae",
+          "#cae2d7",
+          "#e7f2ed"
+        ]
+      },
+      "warn": {
+        "role": "status",
+        "displayName": "Warn Amber",
+        "canonical": "#8a5300",
+        "tonalRamp": [
+          "#3e2500",
+          "#5a3600",
+          "#754700",
+          "#8a5300",
+          "#ad874c",
+          "#cab28c",
+          "#e5d9c7",
+          "#f3eee6"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Customer greeting and admin page h1."
+      },
+      "draft": {
+        "displayName": "Draft",
+        "purpose": "Review text in the sheet and carbon."
+      },
+      "sheet-no": {
+        "displayName": "Sheet Number",
+        "purpose": "NO. 0241 identifiers; never a heading label."
+      }
+    },
+    "shadows": [
+      {
+        "name": "focus-halo",
+        "value": "0 0 0 3px #e9eefb",
+        "purpose": "Ring on sheet focus-within and admin input focus."
+      },
+      {
+        "name": "toggle-knob",
+        "value": "0 1px 2px rgba(16,21,34,.2)",
+        "purpose": "Toggle knob only."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(.16,1,.3,1)",
+        "purpose": "CSS and GSAP expo.out; damped, no bounce."
+      },
+      {
+        "name": "duration-state",
+        "value": "150-200ms",
+        "purpose": "Color, fill, toggle, star lift."
+      },
+      {
+        "name": "duration-stamp",
+        "value": "600ms",
+        "purpose": "COPIED stamp (scale 1.4 to 1)."
+      },
+      {
+        "name": "duration-enter",
+        "value": "800ms",
+        "purpose": "After-copy and reward entrance, delays 250/400ms."
+      },
+      {
+        "name": "duration-handoff",
+        "value": "900ms",
+        "purpose": "Carbon slides out (stack padding 30 to 92px)."
+      },
+      {
+        "name": "duration-settle",
+        "value": "1200ms",
+        "purpose": "Load settle of carbon from y -18."
+      },
+      {
+        "name": "lenis",
+        "value": "lerp 0.1, smoothWheel, driven by gsap.ticker",
+        "purpose": "Smooth scroll; disabled under reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "admin-collapse",
+        "value": "860px"
+      },
+      {
+        "name": "customer-wide",
+        "value": "720px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Sheet + Carbon Stack",
+      "kind": "card",
+      "refersTo": "sheet",
+      "description": "Signature: ink-bordered sheet over an offset carbon duplicate.",
+      "html": "<div class=\"ds-stack\"><div class=\"ds-carbon\"><div>Really good cleaning at Lopez Dental. I'll be back.</div></div><div class=\"ds-sheet\"><div class=\"ds-sheet-head\"><span>NO. 0241</span><span class=\"ds-stamp\">COPIED</span></div><div class=\"ds-draft\">Really good cleaning at Lopez Dental. I'll be back.</div></div></div>",
+      "css": ".ds-stack{position:relative;padding:0 10px 30px 0;width:320px}.ds-carbon{position:absolute;left:10px;right:0;top:30px;bottom:0;background:var(--carbon-wash,#e9eefb);border:1px solid #2346e0;border-radius:3px;color:#2346e0;font-size:16px;line-height:1.55;padding:0 18px 3px;display:flex;flex-direction:column;justify-content:flex-end}.ds-sheet{position:relative;background:#fff;border:1px solid #101522;border-radius:3px;padding:16px 18px 14px;color:#101522}.ds-sheet-head{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.08em;color:#646c7d;margin-bottom:8px}.ds-stamp{font-weight:700;letter-spacing:.14em;color:#2346e0;border:1.5px solid #2346e0;padding:2px 6px;border-radius:2px;transform:rotate(-4deg)}.ds-draft{font-size:17px;line-height:1.55}.ds-sheet:focus-within{box-shadow:0 0 0 3px #e9eefb}"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Full-width carbon action with arrow.",
+      "html": "<button class=\"ds-btn-primary\"><span>Copy &amp; open Google</span><svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\"><path d=\"M7 17 17 7M8 7h9v9\" style=\"stroke:currentColor;fill:none;stroke-width:1.8\"/></svg></button>",
+      "css": ".ds-btn-primary{width:320px;height:58px;border-radius:3px;background:#2346e0;color:#fff;font:600 17px \"Schibsted Grotesk\",system-ui,sans-serif;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border:0;cursor:pointer;transition:background .2s}.ds-btn-primary:hover{background:#1a37b8}.ds-btn-primary:focus-visible{outline:2px solid #2346e0;outline-offset:3px}"
+    },
+    {
+      "name": "Line Button",
+      "kind": "button",
+      "refersTo": "button-line",
+      "description": "Ink-outlined secondary action; fills ink on hover.",
+      "html": "<button class=\"ds-btn-line\">Copy again</button>",
+      "css": ".ds-btn-line{height:44px;padding:0 16px;border:1px solid #101522;border-radius:3px;background:#fff;color:#101522;font:500 15px \"Schibsted Grotesk\",system-ui,sans-serif;cursor:pointer;transition:background .15s,color .15s}.ds-btn-line:hover{background:#101522;color:#fff}.ds-btn-line:focus-visible{outline:2px solid #2346e0;outline-offset:3px}"
+    },
+    {
+      "name": "Chips",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Pill highlights; ink fill when on.",
+      "html": "<div class=\"ds-chips\"><button class=\"ds-chip\" aria-pressed=\"false\">Friendly staff</button><button class=\"ds-chip\" aria-pressed=\"true\">Short wait</button></div>",
+      "css": ".ds-chips{display:flex;gap:6px}.ds-chip{font:14px \"Schibsted Grotesk\",system-ui,sans-serif;padding:7px 12px;border:1px solid #d4d9e4;border-radius:999px;background:#fff;color:#101522;cursor:pointer;transition:background .2s,border-color .2s,color .2s}.ds-chip:hover{border-color:#101522}.ds-chip[aria-pressed=\"true\"]{background:#101522;color:#fff;border-color:#101522}.ds-chip:focus-visible{outline:2px solid #2346e0;outline-offset:3px}"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "custom",
+      "refersTo": "segmented",
+      "description": "Short / Detailed length switch.",
+      "html": "<div class=\"ds-seg\"><button aria-pressed=\"true\">Short</button><button aria-pressed=\"false\">Detailed</button></div>",
+      "css": ".ds-seg{display:inline-flex;border:1px solid #d4d9e4;border-radius:3px}.ds-seg button{height:32px;padding:0 12px;font:13px \"Schibsted Grotesk\",system-ui,sans-serif;letter-spacing:.01em;color:#4d5566;background:none;border:0;border-radius:2px;cursor:pointer}.ds-seg button[aria-pressed=\"true\"]{background:#101522;color:#fff}.ds-seg button:focus-visible{outline:2px solid #2346e0;outline-offset:2px}"
+    },
+    {
+      "name": "Stars",
+      "kind": "custom",
+      "refersTo": "stars",
+      "description": "Ink outline stars; fill ink when rated.",
+      "html": "<div class=\"ds-stars\"><button class=\"ds-star on\"><svg viewBox=\"0 0 24 24\"><path d=\"M12 2.8l2.75 5.9 6.45.75-4.78 4.4 1.27 6.38L12 17.05 6.31 20.23l1.27-6.38L2.8 9.45l6.45-.75z\"/></svg></button><button class=\"ds-star\"><svg viewBox=\"0 0 24 24\"><path d=\"M12 2.8l2.75 5.9 6.45.75-4.78 4.4 1.27 6.38L12 17.05 6.31 20.23l1.27-6.38L2.8 9.45l6.45-.75z\"/></svg></button></div>",
+      "css": ".ds-stars{display:flex;gap:2px}.ds-star{width:44px;height:44px;display:grid;place-items:center;border:0;background:none;border-radius:3px;cursor:pointer;transition:transform .2s cubic-bezier(.16,1,.3,1)}.ds-star:hover{transform:translateY(-2px)}.ds-star svg{width:30px;height:30px;fill:none;stroke:#101522;stroke-width:1.3;stroke-linejoin:round;transition:fill .2s}.ds-star.on svg{fill:#101522}.ds-star:focus-visible{outline:2px solid #2346e0;outline-offset:3px}"
+    },
+    {
+      "name": "Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Admin text field with carbon-wash focus halo.",
+      "html": "<div class=\"ds-field\"><label>Customer first name</label><input class=\"ds-input\" value=\"Emily\"></div>",
+      "css": ".ds-field{display:flex;flex-direction:column;gap:6px;width:260px}.ds-field label{font:500 13px \"Schibsted Grotesk\",system-ui,sans-serif;color:#4d5566}.ds-input{height:42px;border:1px solid #d4d9e4;border-radius:3px;padding:0 12px;background:#fff;font:15px \"Schibsted Grotesk\",system-ui,sans-serif;color:#101522;outline:none;caret-color:#2346e0}.ds-input:hover{border-color:#b3bccc}.ds-input:focus{border-color:#101522;box-shadow:0 0 0 3px #e9eefb}"
+    },
+    {
+      "name": "Status Pills",
+      "kind": "chip",
+      "refersTo": "pill",
+      "description": "Rectangular 3px status pills with dot.",
+      "html": "<span class=\"ds-pill ds-blue\"><span class=\"ds-dot\"></span>Opened</span> <span class=\"ds-pill ds-green\"><span class=\"ds-dot\"></span>Posted</span> <span class=\"ds-pill ds-amber\"><span class=\"ds-dot\"></span>Pending</span>",
+      "css": ".ds-pill{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:3px;font:500 12px \"Schibsted Grotesk\",system-ui,sans-serif;background:#f6f7fa;color:#4d5566}.ds-blue{background:#e9eefb;color:#2346e0}.ds-green{background:#e5f4ec;color:#0f7a4a}.ds-amber{background:#fbf0dc;color:#8a5300}.ds-dot{width:6px;height:6px;border-radius:50%;background:currentColor}"
+    },
+    {
+      "name": "Toggles",
+      "kind": "custom",
+      "refersTo": "toggle",
+      "description": "On, off and locked (platform-forbidden) toggles.",
+      "html": "<span class=\"ds-toggle on\"></span> <span class=\"ds-toggle\"></span> <span class=\"ds-toggle locked\"></span>",
+      "css": ".ds-toggle{display:inline-block;width:38px;height:22px;border-radius:999px;background:#cfd5e0;position:relative}.ds-toggle::after{content:\"\";position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:3px;left:3px;transition:left .2s cubic-bezier(.16,1,.3,1);box-shadow:0 1px 2px rgba(16,21,34,.2)}.ds-toggle.on{background:#2346e0}.ds-toggle.on::after{left:19px}.ds-toggle.locked{opacity:.5;cursor:not-allowed}"
+    },
+    {
+      "name": "Note Callout",
+      "kind": "custom",
+      "refersTo": "note",
+      "description": "Carbon-wash callout for platform rules.",
+      "html": "<div class=\"ds-note\"><span><b>Google and Trustpilot don't allow rewards for reviews.</b> Rewards stay off for them.</span></div>",
+      "css": ".ds-note{padding:14px 16px;border-radius:3px;background:#e9eefb;border:1px solid #2346e0;font:13px/1.5 \"Schibsted Grotesk\",system-ui,sans-serif;color:#4d5566;width:340px}.ds-note b{color:#101522}"
+    },
+    {
+      "name": "Admin Nav Item",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "Sidebar item; ink fill when active.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-i on\">Links <small>142</small></a><a class=\"ds-nav-i\">Brand</a></nav>",
+      "css": ".ds-nav{width:196px;display:flex;flex-direction:column;gap:1px;font-family:\"Schibsted Grotesk\",system-ui,sans-serif;font-size:15px}.ds-nav-i{padding:8px 10px;border-radius:3px;color:#4d5566;font-weight:500;display:flex;justify-content:space-between;cursor:pointer}.ds-nav-i:hover{color:#101522;background:#f6f7fa}.ds-nav-i.on{background:#101522;color:#fff}.ds-nav-i small{opacity:.6;font-weight:400}.ds-nav-i:focus-visible{outline:2px solid #2346e0;outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Carbon Copy",
+    "overview": "The customer's review is the top sheet of a duplicate book. Posting lifts a blue carbon copy off it and hands it to the portal. White bond paper, near-black blue ink, one carbon blue; flat and printed with 1px ink rules and 3px corners. The carbon, an offset pale-blue duplicate, is the only depth. One typeface (Schibsted Grotesk), GSAP damped expo ease-out, Lenis smooth scroll.",
+    "keyCharacteristics": [
+      "White paper, ink #101522, one blue (carbon #2346e0) with its pale wash.",
+      "1px ink border, 3px corners, flat; the carbon offset is the only depth.",
+      "Ink fill means on; carbon blue means act or handed over.",
+      "One typeface, tight display, small spaced sheet numbers.",
+      "Damped expo ease-out everywhere; reduced motion shows final states instantly."
+    ],
+    "rules": [
+      {
+        "name": "The One Blue Rule",
+        "body": "Carbon blue is the only chromatic accent. Never violet, never amber stars, never a second brand hue.",
+        "section": "colors"
+      },
+      {
+        "name": "The Ink Means On Rule",
+        "body": "Selected state is an ink fill with white text. Carbon blue marks the action to take or the duplicate, never selection.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Face Rule",
+        "body": "Schibsted Grotesk throughout. Tightening scales with size; body is never tracked.",
+        "section": "typography"
+      },
+      {
+        "name": "The Carbon Is The Only Depth Rule",
+        "body": "Nothing else is lifted. No blur shadows on cards, modals or buttons.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use ink fill (#101522) for every selected state and carbon blue (#2346e0) for the primary action and the carbon duplicate.",
+      "Do keep corners at 3px (2px nested), borders at 1px, and depth to the carbon offset alone.",
+      "Do keep the customer rating unselected on load and offer the same portals at every rating.",
+      "Do show the locked toggle at 50% opacity with its padlock line, and explain it in a note.",
+      "Do apply focus as a 2px carbon outline and a carbon-wash halo on inputs.",
+      "Do keep text at ink-3 (#646c7d) or darker on white."
+    ],
+    "donts": [
+      "Don't use amber or gold stars, or a violet accent.",
+      "Don't add soft or blurred drop shadows, or pill-rounded cards and textareas.",
+      "Don't use bounce, elastic or spring easing, or animate layout properties other than the stack padding.",
+      "Don't pre-fill the rating or push toward five stars with color, copy or order.",
+      "Don't introduce a second typeface or a second chromatic hue; status green and amber stay in admin pills and the \"Sent\" text.",
+      "Don't put the dark \"Design draft\" switcher into product; it is a prototype tool."
+    ]
+  }
+}

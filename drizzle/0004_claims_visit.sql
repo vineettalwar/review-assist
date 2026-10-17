@@ -1,0 +1,1 @@
+ALTER TABLE `claims` ADD `visit_id` text DEFAULT '' NOT NULL;

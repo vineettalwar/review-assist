@@ -1,0 +1,58 @@
+{
+  "title": "Choose the look of the review page",
+  "question": "The roll assigned The Guest Book. Keep it, take my pick, or re-roll.",
+  "options": [
+    {
+      "id": "assigned",
+      "kind": "assigned",
+      "label": "The Guest Book",
+      "kicker": "THE ROLL",
+      "lineage": "hotel and restaurant guest books signed on the way out",
+      "thesis": "Leaving a review is signing the guest book: a ruled white page, your line waiting in blue ink, already half-written for you.",
+      "palette": ["#ffffff", "#0f1729", "#1f4fd8", "#dfe5f0"],
+      "materials": ["ruled hairlines on white stock", "blue fountain-pen ink"],
+      "viewport": "Phone: a white ruled page. Brand name set small at the top like the book's binding label, then a large greeting. The draft sits on actual ruled baselines in blue ink and writes itself line by line as the page loads. Stars and highlight chips sit above it as plain controls; a full-width blue 'Copy & open Google' button anchors the bottom.",
+      "risk": "Ruled lines can tip into a stationery costume if they go beyond the draft area.",
+      "raised": [
+        {"from": "challenger-centre-rail", "raise": "Every rule, divider and outline is drawn at exactly one device pixel, and corners stay square-ish (4px). No soft cards."},
+        {"from": "challenger-saville", "raise": "Vast unprinted white: the draft owns the field and everything else stays small and quiet."},
+        {"from": "challenger-streaming", "raise": "Once a portal is chosen, it expands with its next step and the others dim back."}
+      ],
+      "html": ".impeccable/mocks/decision/assigned.html",
+      "htmlFrame": "390x844"
+    },
+    {
+      "id": "model-pick",
+      "kind": "pick",
+      "label": "Carbon Copy",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "duplicate-book forms and blue carbon paper",
+      "thesis": "The draft is the top sheet and the portal gets the carbon: copy & open literally lifts a blue copy off your words.",
+      "palette": ["#ffffff", "#101522", "#2346e0", "#e9eefb"],
+      "materials": ["thin bond paper", "blue carbon transfer"],
+      "viewport": "Phone: the draft on a white sheet with a faint blue duplicate offset beneath it. Pressing Copy slides the blue carbon out from under the sheet toward the portal button.",
+      "risk": "Familiar 'paper card' metaphor; the most likely place many runs would land, and the carbon offset can read as a drop shadow if it isn't animated.",
+      "html": ".impeccable/mocks/decision/model-pick.html",
+      "htmlFrame": "390x844"
+    },
+    {"id": "challenger-centre-rail", "kind": "challenger", "catalogId": "rw-centre-rail-reference-setting", "label": "Centre-Rail Reference Setting", "verdict": "declined", "lineage": "ruled reference editions", "palette": ["#f1ece0", "#1a1a1a", "#c0392b"], "materials": ["ruling-engine hairlines"], "case": "Fuses poorly: twin columns and a key rail fight a one-task phone page.", "kept": "One-device-pixel ruling discipline, no soft radii.", "hero": "https://impeccable.style/worlds/cards/rw-centre-rail-reference-setting-hero.webp"},
+    {"id": "challenger-dense", "kind": "challenger", "catalogId": "japanese-high-density-web", "label": "Japanese High-Density Web", "verdict": "declined", "lineage": "packed portal sites", "palette": ["#ffffff", "#111111", "#d0021b"], "materials": ["module mosaic"], "case": "Fuses poorly: density is the opposite of a zero-effort single task.", "kept": "A strict hairline border system.", "hero": "https://impeccable.style/worlds/cards/japanese-high-density-web-hero.webp"},
+    {"id": "challenger-timetable", "kind": "challenger", "catalogId": "rw-timetable-slide-rack", "label": "Timetable Slide Rack", "verdict": "declined", "lineage": "pocket airline timetables", "palette": ["#d9a521", "#1c1c1c", "#f3ecd8"], "materials": ["tinted glass", "goldenrod bed"], "case": "Fuses poorly: raked panels and goldenrod break the pinned white and blue.", "kept": "Rank carried by weight more than by size jumps.", "hero": "https://impeccable.style/worlds/cards/rw-timetable-slide-rack-hero.webp"},
+    {"id": "challenger-streaming", "kind": "challenger", "catalogId": "pop-culture-shelf-streaming-title-card-wall", "label": "Streaming Title Wall", "verdict": "declined", "lineage": "streaming catalog rows", "palette": ["#0b0b0b", "#ffffff"], "materials": ["poster tiles"], "case": "Fuses poorly: there is no catalog to browse here.", "kept": "The focused item expands while the rest dims.", "hero": "https://impeccable.style/worlds/cards/pop-culture-shelf-streaming-title-card-wall-hero.webp"},
+    {"id": "challenger-saville", "kind": "challenger", "catalogId": "brand-identity-canon-saville-catalog-sleeve", "label": "Factory Catalog Sleeve", "verdict": "declined", "lineage": "Factory Records sleeves", "palette": ["#0a0a0a", "#ffffff"], "materials": ["matte black", "white hairline plot"], "case": "Fuses poorly: matte black contradicts the pinned white canvas; coded labels hurt clarity.", "kept": "Vast unprinted ground with one element owning the field.", "hero": "https://impeccable.style/worlds/cards/brand-identity-canon-saville-catalog-sleeve-hero.webp"},
+    {"id": "challenger-splitflap", "kind": "challenger", "catalogId": "signals-instruments-split-flap-concourse", "label": "Split-Flap Concourse", "verdict": "declined", "lineage": "rail departure boards", "palette": ["#111111", "#ffffff", "#f2a900"], "materials": ["flap faces", "brushed steel"], "case": "Fuses poorly: departure-board theatrics feel noisy for a calm thank-you.", "kept": "State changes restyle in place without breaking the layout.", "hero": "https://impeccable.style/worlds/cards/signals-instruments-split-flap-concourse-hero.webp"}
+  ],
+  "reroll": {"registers": ["safer", "bolder"]},
+  "canon": true,
+  "canonCard": {
+    "kind": "canon",
+    "label": "The category standard",
+    "thesis": "A clean review-request page as the best SaaS tools ship it, executed impeccably.",
+    "palette": ["#ffffff", "#111827", "#2563eb"],
+    "materials": ["clean grid", "rounded cards"],
+    "viewport": "Phone: logo, greeting, star row, rounded textarea card, primary blue button.",
+    "risk": "Looks like every other review tool.",
+    "html": ".impeccable/mocks/decision/canon.html",
+    "htmlFrame": "390x844"
+  }
+}

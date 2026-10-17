@@ -1,0 +1,12 @@
+ADMIN_PASSWORD=change-me
+SESSION_SECRET=generate-a-long-random-string
+OPENROUTER_API_KEY=
+APP_URL=http://localhost:3000
+ANTHROPIC_API_KEY=
+OPENAI_API_KEY=
+# Optional: encrypts provider keys saved in Settings (defaults to SESSION_SECRET)
+AI_KEYS_SECRET=
+# Production: set CF_ACCESS_AUD (Worker secret) after creating the Access app.
+# Leave empty locally so password login still works.
+CF_ACCESS_TEAM_DOMAIN=
+CF_ACCESS_AUD=

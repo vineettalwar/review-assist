@@ -1,0 +1,58 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/canon.html"
+        ],
+        "createdAt": "2026-10-17T19:42:07.431Z",
+        "reason": "assistant: canon card intentionally depicts the category-standard look (Inter) for the direction round"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/assigned.html"
+        ],
+        "createdAt": "2026-10-17T19:42:07.454Z",
+        "reason": "assistant: unchosen decision sketch, spent hand, not shipped"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "design/review-link.html"
+        ],
+        "createdAt": "2026-10-17T19:42:07.474Z",
+        "reason": "assistant: carbon copy's last line intentionally peeks 3px above its bottom edge under the sheet (direction contract signature)"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/assigned.html"
+        ],
+        "createdAt": "2026-10-17T19:45:38.090Z",
+        "reason": "assistant: unchosen direction-round sketch with its own world font; not shipped"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/canon.html"
+        ],
+        "createdAt": "2026-10-17T19:45:38.113Z",
+        "reason": "assistant: canon card intentionally shows the category-standard font; not shipped"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "hiragino sans",
+        "createdAt": "2026-10-17T22:05:50.880Z"
+      }
+    ]
+  }
+}

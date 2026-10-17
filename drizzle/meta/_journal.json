@@ -1,0 +1,55 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1792266360913,
+      "tag": "0000_dusty_lord_tyger",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1792268281436,
+      "tag": "0001_multi_brand_memory",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792269645937,
+      "tag": "0002_ai_providers",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1792274096643,
+      "tag": "0003_brain_context_visits",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1792274369477,
+      "tag": "0004_claims_visit",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1792274394478,
+      "tag": "0005_submissions_visit",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1792274573059,
+      "tag": "0006_more_indexes",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Your review · Lopez Dental</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#ffffff;
+  --ink:#101522;
+  --ink-2:#4d5566;
+  --ink-3:#646c7d;
+  --rule:#d4d9e4;
+  --carbon:#2346e0;
+  --carbon-deep:#1a37b8;
+  --carbon-wash:#e9eefb;
+  --ok:#0f7a4a;
+  --r:3px;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+html.lenis,html.lenis body{height:auto}
+.lenis.lenis-smooth{scroll-behavior:auto!important}
+body{background:var(--paper);color:var(--ink);font-family:"Schibsted Grotesk",system-ui,sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+::selection{background:var(--carbon);color:#fff}
+::-webkit-scrollbar{width:10px}::-webkit-scrollbar-thumb{background:var(--rule);border:3px solid var(--paper);border-radius:10px}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--carbon);outline-offset:3px;border-radius:var(--r)}
+svg{display:block}
+
+.page{max-width:520px;margin:0 auto;padding:28px 22px calc(40px + env(safe-area-inset-bottom))}
+
+/* brand line */
+.brand{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600}
+.mark{width:26px;height:26px;border-radius:var(--r);background:var(--ink);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;letter-spacing:.02em}
+
+h1{font-size:clamp(34px,9vw,44px);line-height:1.03;letter-spacing:-.035em;font-weight:700;margin:34px 0 10px;text-wrap:balance}
+.lede{color:var(--ink-2);font-size:16px;max-width:34ch}
+
+/* rating */
+.rate{margin-top:30px}
+.rate-row{display:flex;align-items:center;gap:14px}
+.stars{display:flex;gap:2px}
+.star{width:44px;height:44px;display:grid;place-items:center;border-radius:var(--r);transition:transform .2s var(--ease)}
+.star svg{width:30px;height:30px;fill:none;stroke:var(--ink);stroke-width:1.3;stroke-linejoin:round;transition:fill .2s,stroke .2s}
+.star.on svg{fill:var(--ink)}
+.star:hover{transform:translateY(-2px)}
+.rate-word{font-size:14px;color:var(--ink-3);min-width:8ch}
+
+/* chips */
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.chip{font-size:14px;padding:7px 12px;border:1px solid var(--rule);border-radius:999px;transition:background .2s,border-color .2s,color .2s}
+.chip:hover{border-color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+/* sheet stack: the signature */
+.stack{position:relative;margin-top:28px;padding:0 10px 30px 0}
+.carbon{position:absolute;left:10px;right:0;top:30px;bottom:0;background:var(--carbon-wash);border:1px solid var(--carbon);border-radius:var(--r);overflow:hidden;color:var(--carbon);font-size:16px;line-height:1.55;padding:0 18px 3px;display:flex;flex-direction:column;justify-content:flex-end;will-change:transform}
+.carbon::before{content:"";position:absolute;left:0;right:0;top:0;border-top:1px dashed rgba(35,70,224,.45)}
+.carbon-text{filter:blur(.25px)}
+.carbon-tag{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.08em;color:var(--carbon);padding:8px 0 4px;opacity:0;height:0;overflow:hidden}
+.handed .carbon-tag{opacity:1;height:auto}
+.sheet{position:relative;background:var(--paper);border:1px solid var(--ink);border-radius:var(--r);padding:16px 18px 14px}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;font-size:11px;letter-spacing:.08em;color:var(--ink-3);margin-bottom:8px}
+.seg{display:flex;border:1px solid var(--rule);border-radius:var(--r)}
+.seg button{position:relative;font-size:13px;letter-spacing:.01em;height:32px;padding:0 12px;color:var(--ink-2);border-radius:2px}
+.seg button::after{content:"";position:absolute;inset:-6px 0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+textarea{display:block;width:100%;border:0;outline:0;resize:none;font:inherit;font-size:17px;line-height:1.55;color:var(--ink);background:transparent;min-height:4.7em;caret-color:var(--carbon);overflow:hidden}
+textarea:focus-visible{outline:0}
+.sheet:focus-within{box-shadow:0 0 0 3px var(--carbon-wash)}
+.sheet-foot{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--rule);margin-top:10px;padding-top:10px;font-size:13px;color:var(--ink-3)}
+.regen{display:flex;align-items:center;gap:6px;color:var(--ink-2);font-size:13px;padding:4px 0}
+.regen svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.6}
+.regen:hover{color:var(--carbon)}
+.regen[disabled]{opacity:.5;cursor:progress}
+.sheet-no{display:flex;align-items:center;gap:8px}
+.stamp{font-size:11px;font-weight:700;letter-spacing:.14em;color:var(--carbon);border:1.5px solid var(--carbon);padding:2px 6px;border-radius:2px;transform:rotate(-4deg);opacity:0}
+.suggest{display:none;align-items:center;gap:6px;font-size:13px;color:var(--carbon);font-weight:500;padding:4px 0}
+.suggest.on{display:flex}
+.suggest:hover{text-decoration:underline;text-underline-offset:3px}
+
+/* writing state */
+.sheet.writing textarea{color:var(--ink-2)}
+
+/* actions */
+.post{margin-top:26px}
+.go{position:relative;width:100%;height:58px;border-radius:var(--r);background:var(--carbon);color:#fff;font-weight:600;font-size:17px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;overflow:hidden;transition:background .2s}
+.go:hover{background:var(--carbon-deep)}
+.go svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8}
+.go .g{display:flex;align-items:center;gap:12px}
+.chip[hidden]{display:none}
+.alts{display:flex;justify-content:center;align-items:baseline;gap:6px;margin-top:12px;font-size:14px;color:var(--ink-3);flex-wrap:wrap}
+.alts button{color:var(--ink);text-decoration:underline;text-decoration-color:var(--rule);text-underline-offset:4px;padding:4px}
+.alts button:hover{text-decoration-color:var(--carbon);color:var(--carbon)}
+
+/* after copy */
+.after{display:none;margin-top:22px;border-top:1px solid var(--ink);padding-top:18px}
+.after.on{display:block}
+.after h2{font-size:22px;letter-spacing:-.025em;line-height:1.15}
+.after p{color:var(--ink-2);font-size:15px;margin-top:6px}
+.after .row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+.btn-line{height:44px;padding:0 16px;border:1px solid var(--ink);border-radius:var(--r);font-weight:500;font-size:15px;display:inline-flex;align-items:center;gap:8px}
+.btn-line:hover{background:var(--ink);color:#fff}
+.btn-line svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8}
+.fallback{display:none;margin-top:12px;font-size:14px;color:var(--ink);background:var(--carbon-wash);padding:10px 12px;border-radius:var(--r)}
+.fallback.on{display:block}
+
+/* reward (only portals that allow incentives) */
+.reward{display:none;margin-top:18px;border:1px solid var(--carbon);border-radius:var(--r);padding:18px;background:var(--carbon-wash)}
+.reward.on{display:block}
+.reward h3{font-size:19px;letter-spacing:-.02em}
+.reward p{font-size:14px;color:var(--ink-2);margin-top:4px}
+.reward form{display:flex;gap:8px;margin-top:14px}
+.reward input{flex:1;min-width:0;height:46px;border:1px solid var(--ink);border-radius:var(--r);padding:0 12px;font:inherit;font-size:16px;background:#fff;color:var(--ink);caret-color:var(--carbon)}
+.reward input::placeholder{color:var(--ink-3)}
+.reward input:focus-visible{outline:2px solid var(--carbon);outline-offset:1px}
+.reward .send{height:46px;padding:0 18px;border-radius:var(--r);background:var(--ink);color:#fff;font-weight:600}
+.reward .sent{display:none;font-size:15px;color:var(--ok);margin-top:12px;font-weight:500}
+
+.foot{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);font-size:13px;color:var(--ink-3);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+
+/* inactive link */
+.inactive{display:none;min-height:80vh;flex-direction:column;justify-content:center}
+.inactive h1{margin-top:0}
+body.is-inactive .live{display:none}
+body.is-inactive .inactive{display:flex}
+
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+@media (min-width:720px){
+  .page{padding-top:72px}
+  h1{margin-top:56px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="brand"><span class="mark" aria-hidden="true">LD</span>Lopez Dental</div>
+
+  <main class="live">
+    <h1>Hi Emily. Your review is drafted.</h1>
+    <p class="lede">Rate your visit, change any word, and we’ll hand a copy to Google.</p>
+
+    <section class="rate" aria-labelledby="rate-l">
+      <h2 id="rate-l" class="sr">Your rating</h2>
+      <div class="rate-row">
+        <div class="stars" role="radiogroup" aria-label="Your rating" id="stars"></div>
+        <span class="rate-word" id="rateWord" aria-live="polite">Tap to rate</span>
+      </div>
+      <div class="chips" id="chips" aria-label="What stood out">
+        <button class="chip" aria-pressed="false" data-k="friendly" data-set="pos">Friendly staff</button>
+        <button class="chip" aria-pressed="true" data-k="clear" data-set="pos">Clear explanations</button>
+        <button class="chip" aria-pressed="true" data-k="wait" data-set="pos">Short wait</button>
+        <button class="chip" aria-pressed="false" data-k="clean" data-set="both">Clean office</button>
+        <button class="chip" aria-pressed="false" data-k="gentle" data-set="pos">Gentle cleaning</button>
+        <button class="chip" aria-pressed="false" data-k="longwait" data-set="neg" hidden>Long wait</button>
+        <button class="chip" aria-pressed="false" data-k="rushed" data-set="neg" hidden>Felt rushed</button>
+        <button class="chip" aria-pressed="false" data-k="costs" data-set="neg" hidden>Unclear costs</button>
+        <button class="chip" aria-pressed="false" data-k="friendly2" data-set="neg" hidden>Friendly staff</button>
+      </div>
+    </section>
+
+    <section class="stack" aria-label="Your review draft">
+      <div class="carbon" id="carbon" aria-hidden="true"><div class="carbon-text" id="carbonText"></div><div class="carbon-tag"><span>NO. 0241 · COPY</span><span id="carbonTo">TO GOOGLE</span></div></div>
+      <div class="sheet" id="sheet">
+        <div class="sheet-head">
+          <span class="sheet-no"><span>NO. 0241</span><span class="stamp" id="stamp" aria-hidden="true">COPIED</span></span>
+          <div class="seg" role="group" aria-label="Length">
+            <button aria-pressed="true" data-v="short">Short</button>
+            <button aria-pressed="false" data-v="detailed">Detailed</button>
+          </div>
+        </div>
+        <label for="draft" class="sr">Your review, editable</label>
+        <textarea id="draft" rows="5" spellcheck="true"></textarea>
+        <div class="sheet-foot">
+          <button class="regen" id="regen" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>
+            New draft
+          </button>
+          <button class="suggest" id="suggest" type="button"></button>
+          <span id="count">0 words</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="post" aria-label="Post your review">
+      <button class="go" id="go" data-portal="google">
+        <span class="g"><span id="goLabel">Copy &amp; open Google</span></span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
+      </button>
+      <div class="alts">or post on <button data-portal="trustpilot">Trustpilot</button><button data-portal="site">our website</button></div>
+
+      <div class="fallback" id="fallback" role="status">Couldn’t copy automatically. Your review is selected above: press and hold, then Copy.</div>
+
+      <div class="after" id="after" role="status">
+        <h2><span id="afterLead">Copied. Paste</span> it on <span id="pname">Google</span>.</h2>
+        <p>We opened it in a new tab. Thanks for taking a minute, Emily.</p>
+        <div class="row">
+          <button class="btn-line" id="reopen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>Open again</button>
+          <button class="btn-line" id="recopy"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="1"/><path d="M16 8V4H4v12h4"/></svg>Copy again</button>
+        </div>
+      </div>
+
+      <div class="reward" id="reward">
+        <h3>A thank-you: 15% off your next visit</h3>
+        <p>For any review on our website, whatever you rate or write. Leave your email and we’ll send the code.</p>
+        <form id="rewardForm" novalidate>
+          <label for="email" class="sr">Email</label>
+          <input id="email" type="email" placeholder="you@email.com" autocomplete="email" required>
+          <button class="send" type="submit">Send</button>
+        </form>
+        <div class="sent" id="sent" role="status">Sent. Check your inbox.</div>
+      </div>
+    </section>
+  </main>
+
+  <section class="inactive" aria-labelledby="in-l">
+    <h1 id="in-l">This link isn’t active.</h1>
+    <p class="lede">It may have expired. If you meant to leave a review, ask Lopez Dental for a new link.</p>
+  </section>
+
+  <footer class="foot"><span>Only post what reflects your real experience.</span><span>Demo content</span></footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script>
+<script>
+(() => {
+  if (new URLSearchParams(location.search).get('state') === 'inactive') { document.body.classList.add('is-inactive'); return; }
+
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const hasGsap = typeof gsap !== 'undefined';
+
+  // smooth scroll
+  if (!reduce && typeof Lenis !== 'undefined') {
+    const lenis = new Lenis({ lerp: .1, smoothWheel: true });
+    if (hasGsap) { gsap.ticker.add(t => lenis.raf(t * 1000)); gsap.ticker.lagSmoothing(0); }
+    else { const raf = t => { lenis.raf(t); requestAnimationFrame(raf); }; requestAnimationFrame(raf); }
+  }
+
+  // demo generation (real app: OpenRouter, cached per link)
+  const bits = {
+    friendly:['the staff were friendly','everyone at the desk was friendly'],
+    friendly2:['the staff were friendly','the front desk was kind'],
+    clear:['Dr. Lopez explained everything clearly','Dr. Lopez walked me through what she saw'],
+    wait:['I was seen almost right away','there was barely any wait'],
+    clean:['the office is spotless','the office was very clean'],
+    gentle:['the cleaning itself was gentle','it was a gentle, careful cleaning'],
+    longwait:['I waited a long time past my appointment','the wait was long'],
+    rushed:['the visit felt rushed','it all felt a bit rushed'],
+    costs:['costs weren’t explained up front','I wasn’t clear on the cost beforehand']
+  };
+  const NEG = new Set(['longwait','rushed','costs']);
+  const tone = r => r === 0 ? 'neutral' : r >= 4 ? 'good' : r === 3 ? 'mixed' : 'poor';
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+  const join = a => a.length > 1 ? a.slice(0,-1).join(', ') + ' and ' + a.at(-1) : (a[0] || '');
+  let variantSeed = 0;
+  function compose(r, keys, len){
+    const say = k => bits[k][variantSeed % 2];
+    const pos = keys.filter(k => !NEG.has(k)).map(say), neg = keys.filter(k => NEG.has(k)).map(say);
+    const t = tone(r);
+    const open = {neutral:'Had my cleaning at Lopez Dental.', good:'Really good cleaning at Lopez Dental.', mixed:'My cleaning at Lopez Dental was okay.', poor:'My visit to Lopez Dental didn’t go as I’d hoped.'}[t];
+    let mid = '';
+    if (neg.length) mid += ` ${cap(join(neg))}.`;
+    if (pos.length) mid += (neg.length || t === 'poor') ? ` On the plus side, ${join(pos)}.` : ` ${cap(join(pos))}.`;
+    const close = {neutral:'', good:' I’ll be back.', mixed:' A few things could have gone smoother.', poor:' Sharing this so they can improve.'}[t];
+    if (len === 'short') return (open + mid + close).trim();
+    const extra = {neutral:' It was a regular check-in and it went as expected.', good:' No rush at any point, and I left knowing exactly what to keep an eye on.', mixed:' The care itself was solid, but the visit overall could have been smoother.', poor:' I left with questions I hadn’t had time to ask.'}[t];
+    return (open + mid + extra + close).trim();
+  }
+
+  // elements
+  const $ = id => document.getElementById(id);
+  const draft = $('draft'), carbonText = $('carbonText'), sheet = $('sheet'), stack = document.querySelector('.stack');
+  let rating = 0, len = 'short', typing = null, edited = false, lastWritten = '', undoText = null, undoTimer;
+  const words = ['Tap to rate','Poor','Not great','Okay','Good','Great'];
+
+  // stars
+  const starPath = 'M12 2.8l2.75 5.9 6.45.75-4.78 4.4 1.27 6.38L12 17.05 6.31 20.23l1.27-6.38L2.8 9.45l6.45-.75z';
+  for (let i = 1; i <= 5; i++) {
+    const b = document.createElement('button');
+    b.className = 'star'; b.setAttribute('role','radio'); b.setAttribute('aria-checked','false'); b.setAttribute('aria-label', `${i} star${i>1?'s':''}`);
+    b.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${starPath}"/></svg>`;
+    b.onclick = () => { const was = tone(rating); rating = i; paintStars(); if (tone(rating) !== was) swapChips(); request(); };
+    $('stars').append(b);
+  }
+  function paintStars(){
+    [...$('stars').children].forEach((s,i) => { s.classList.toggle('on', i < rating); s.setAttribute('aria-checked', String(i === rating-1)); });
+    $('rateWord').textContent = words[rating];
+  }
+  // chips follow the rating: low ratings get honest options too
+  function swapChips(){
+    const low = rating > 0 && rating <= 3;
+    document.querySelectorAll('.chip').forEach(c => {
+      const show = c.dataset.set === 'both' || (low ? c.dataset.set === 'neg' : c.dataset.set === 'pos');
+      c.hidden = !show; if (!show) c.setAttribute('aria-pressed','false');
+    });
+  }
+
+  // chips & length
+  document.querySelectorAll('.chip').forEach(c => c.onclick = () => { c.setAttribute('aria-pressed', String(c.getAttribute('aria-pressed') !== 'true')); request(); });
+  document.querySelectorAll('.seg button').forEach(b => b.onclick = () => {
+    len = b.dataset.v; document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); request(true);
+  });
+  $('regen').onclick = () => { variantSeed++; request(true); };
+
+  const activeKeys = () => [...document.querySelectorAll('.chip[aria-pressed="true"]:not([hidden])')].map(c => c.dataset.k);
+  function fit(){ draft.style.height = 'auto'; draft.style.height = draft.scrollHeight + 'px'; }
+  function sync(){ carbonText.textContent = draft.value; const n = draft.value.trim().split(/\s+/).filter(Boolean).length; $('count').textContent = `${n} word${n===1?'':'s'}`; fit(); }
+  draft.addEventListener('input', () => { edited = draft.value !== lastWritten; sync(); unhand(); });
+
+  // never overwrite the customer's own words without asking
+  const suggest = $('suggest');
+  function request(explicit){
+    if (edited && !explicit) {
+      suggest.textContent = rating ? `Rewrite for ${rating} star${rating>1?'s':''}` : 'Rewrite with these highlights';
+      suggest.onclick = () => rewrite(); suggest.classList.add('on'); return;
+    }
+    if (edited && explicit) { rewrite(); return; }
+    write();
+  }
+  function rewrite(){
+    undoText = draft.value; write();
+    suggest.textContent = 'Undo'; suggest.classList.add('on');
+    suggest.onclick = () => { if (typing) typing.kill(); draft.value = undoText; lastWritten = ''; edited = true; sync(); suggest.classList.remove('on'); };
+    clearTimeout(undoTimer); undoTimer = setTimeout(() => suggest.classList.remove('on'), 7000);
+  }
+
+  // type only what changed, word by word, from the shared beginning
+  function write(){
+    const text = compose(rating, activeKeys(), len), from = draft.value;
+    edited = false; lastWritten = text; if (suggest.textContent !== 'Undo') suggest.classList.remove('on');
+    if (typing) typing.kill();
+    let k = 0; while (k < from.length && k < text.length && from[k] === text[k]) k++;
+    k = text.lastIndexOf(' ', k) + 1;
+    const head = text.slice(0, k), tail = text.slice(k).split(/(?<=\s)/);
+    if (reduce || !hasGsap || !tail.length) { draft.value = text; sync(); return; }
+    sheet.classList.add('writing');
+    const o = { n: 0 };
+    typing = gsap.to(o, { n: tail.length, duration: Math.min(1.1, .15 + tail.length * .045), ease: 'power1.out',
+      onUpdate(){ draft.value = head + tail.slice(0, Math.round(o.n)).join(''); sync(); },
+      onComplete(){ draft.value = text; sync(); sheet.classList.remove('writing'); } });
+  }
+
+  // posting: the carbon slides out from under the sheet and stays out, handed over
+  const portals = {
+    google:{ name:'Google', url:'https://search.google.com/local/writereview?placeid=DEMO', incentive:false },
+    trustpilot:{ name:'Trustpilot', url:'https://www.trustpilot.com/evaluate/lopezdental.example', incentive:false },
+    site:{ name:'our website', url:'https://lopezdental.example/reviews', incentive:true }
+  };
+  let last = 'google', handed = false;
+  async function post(key){
+    last = key; const p = portals[key];
+    let ok = true;
+    try { await navigator.clipboard.writeText(draft.value); } catch { ok = false; }
+    window.open(p.url, '_blank', 'noopener');
+    $('pname').textContent = p.name;
+    $('carbonTo').textContent = 'TO ' + (key === 'site' ? 'WEBSITE' : p.name.toUpperCase());
+    $('afterLead').textContent = ok ? 'Copied. Paste' : 'Copy it, then paste';
+    $('fallback').classList.toggle('on', !ok);
+    if (!ok) { draft.focus(); draft.select(); }
+    $('after').classList.add('on');
+    $('reward').classList.toggle('on', p.incentive);
+    hand();
+    if (hasGsap && !reduce) {
+      gsap.from('#after', { y: 10, opacity: 0, duration: .8, ease: 'expo.out', delay: .25 });
+      if (p.incentive) gsap.from('#reward', { y: 10, opacity: 0, duration: .8, ease: 'expo.out', delay: .4 });
+    }
+  }
+  function hand(){
+    stack.classList.add('handed'); handed = true;
+    if (hasGsap && !reduce) {
+      gsap.to(stack, { paddingBottom: 92, duration: .9, ease: 'expo.out' });
+      gsap.fromTo('#stamp', { opacity: 0, scale: 1.4 }, { opacity: 1, scale: 1, duration: .6, ease: 'expo.out' });
+    } else { stack.style.paddingBottom = '92px'; $('stamp').style.opacity = 1; }
+  }
+  function unhand(){
+    if (!handed) return; handed = false; stack.classList.remove('handed');
+    if (hasGsap && !reduce) { gsap.to(stack, { paddingBottom: 30, duration: .6, ease: 'expo.out' }); gsap.to('#stamp', { opacity: 0, duration: .2 }); }
+    else { stack.style.paddingBottom = ''; $('stamp').style.opacity = 0; }
+  }
+  $('go').onclick = () => post('google');
+  document.querySelectorAll('.alts button').forEach(b => b.onclick = () => post(b.dataset.portal));
+  $('reopen').onclick = () => window.open(portals[last].url, '_blank', 'noopener');
+  $('recopy').onclick = () => navigator.clipboard?.writeText(draft.value).catch(() => {});
+  $('rewardForm').onsubmit = e => {
+    e.preventDefault(); const i = $('email');
+    if (!i.checkValidity()) { i.reportValidity(); return; }
+    e.target.style.display = 'none'; $('sent').style.display = 'block';
+  };
+
+  // one settle on load: the carbon slips under the sheet
+  if (hasGsap && !reduce) gsap.from('#carbon', { y: -18, duration: 1.2, ease: 'expo.out', delay: .2 });
+  write();
+})();
+</script>
+</body>
+</html>

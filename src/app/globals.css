@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #ffffff;
+  --color-surface: #f6f7fa;
+  --color-wash: #e9eefb;
+  --color-ink: #101522;
+  --color-ink-2: #4d5566;
+  --color-ink-3: #646c7d;
+  --color-rule: #d4d9e4;
+  --color-rule-strong: #b3bccc;
+  --color-carbon: #2346e0;
+  --color-carbon-deep: #1a37b8;
+  --color-ok: #0f7a4a;
+  --color-ok-wash: #e5f4ec;
+  --color-warn: #8a5300;
+  --color-warn-wash: #fbf0dc;
+  --color-danger: #b3261e;
+  --color-danger-wash: #fbe9e7;
+
+  --radius: 3px;
+  --radius-sm: 3px;
+  --radius-md: 3px;
+  --radius-lg: 3px;
+
+  --font-sans: var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, Menlo, monospace;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  caret-color: var(--color-carbon);
+}
+
+::selection {
+  background: var(--color-carbon);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-carbon);
+  outline-offset: 2px;
+}
+
+@layer base {
+  h1, h2, h3 {
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+  }
+}
+
+button {
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Carbon handover: the copy slides out from under the original sheet. */
+@keyframes carbon-out {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+.carbon-out {
+  animation: carbon-out 0.9s var(--ease-out-expo) both;
+}
+
+/* One-question flow: each question rises in. */
+@keyframes q-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+.q-in {
+  animation: q-in 0.45s var(--ease-out-expo) both;
+}

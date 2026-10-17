@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "review-assist", "runtimeExecutable": "bun", "runtimeArgs": ["run", "dev", "--", "-p", "3020"], "port": 3020 }
+  ]
+}

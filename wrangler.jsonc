@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "review-assist",
+  "account_id": "63506c86c2c3f946d376d31b62944b2d",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-09-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "review-assist",
+      "database_id": "2fa2081a-be05-4818-86e2-7b4da9ef3cba",
+      "migrations_dir": "drizzle"
+    }
+  ],
+  "r2_buckets": [{ "binding": "UPLOADS", "bucket_name": "review-assist-uploads" }],
+  "vars": {
+    "APP_URL": "https://review-assist.sometechwork.workers.dev",
+    "CF_ACCESS_TEAM_DOMAIN": "https://aged-sun-abae.cloudflareaccess.com"
+  }
+}
