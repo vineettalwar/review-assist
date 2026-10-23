@@ -1,0 +1,21 @@
+# docker compose up --build  →  http://localhost:3000/admin  (customer page: /r/demo241abc)
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      # Source is bind-mounted for hot reload; deps, build output and local D1/R2 state stay in the container.
+      - .:/app
+      - node_modules:/app/node_modules
+      - next:/app/.next
+      - wrangler:/app/.wrangler
+    environment:
+      # File events don't cross the Windows/macOS bind mount, so poll instead.
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+
+volumes:
+  node_modules:
+  next:
+  wrangler:

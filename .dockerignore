@@ -1,0 +1,12 @@
+node_modules
+.next
+.next-preview
+.open-next
+.wrangler
+.git
+.dev.vars
+.env*
+_tmp
+.impeccable
+design
+*.tsbuildinfo
