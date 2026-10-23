@@ -18,11 +18,10 @@
   "vars": {
     "APP_URL": "https://review-assist.sometechwork.workers.dev",
     "CF_ACCESS_TEAM_DOMAIN": "https://aged-sun-abae.cloudflareaccess.com"
-  },
-  // Required encrypted bindings — set with: bunx wrangler secret put <NAME>
-  // Optional AI keys (OPENROUTER_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, AI_KEYS_SECRET,
-  // CF_ACCESS_AUD) can also be set the same way; never put them in `vars`.
-  "secrets": {
-    "required": ["SESSION_SECRET"]
   }
+  // Encrypted secrets — set with: bunx wrangler secret put <NAME>
+  // Required: SESSION_SECRET, plus ADMIN_PASSWORD until CF_ACCESS_AUD is set.
+  // Optional: OPENROUTER_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, AI_KEYS_SECRET, CF_ACCESS_AUD.
+  // Never put them in `vars`. No "secrets" block on purpose: declaring one makes local dev load
+  // only the listed names from .dev.vars, which silently drops ADMIN_PASSWORD and the AI keys.
 }
