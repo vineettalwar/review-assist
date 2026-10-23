@@ -64,6 +64,11 @@ export default async function LinksPage({ searchParams }: { searchParams: Promis
                     <Td>
                       <span className="block font-medium">{v.name || "—"}</span>
                       {v.email && <a href={`mailto:${v.email}`} className="text-[13px] text-ink-3 hover:underline">{v.email}</a>}
+                      {v.contactOptInAt && (
+                        <span className="mt-0.5 block text-[11px] tracking-[0.04em] text-carbon" title={`Opted in ${new Date(v.contactOptInAt).toLocaleString()}`}>
+                          OK TO CONTACT
+                        </span>
+                      )}
                     </Td>
                     <Td className="min-w-64 max-w-md">
                       {(() => {

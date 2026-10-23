@@ -35,11 +35,13 @@ export type ReviewCopy = {
   nameLabel: string;
   emailLabel: string;
   emailPlaceholder: string;
-  nameRequired: string;
-  emailRequired: string;
   emailInvalid: string;
+  detailsToggle: string;
+  contactOk: (brand: string) => string;
   privacy: (brand: string) => string;
   brandFallback: string;
+  /** Google can't be prefilled, so after copying we say exactly what to do there. */
+  googleSteps: (rating: number) => [string, string, string];
 
   copyAndOpen: (portal: string) => string;
   orPostOn: string;
@@ -51,6 +53,7 @@ export type ReviewCopy = {
   copyAgain: string;
 
   claimTo: (email: string) => string;
+  claimEmailLabel: string;
   claimSend: string;
   claimSent: string;
   claimError: string;
@@ -102,11 +105,16 @@ export const REVIEW_COPY: Record<Lang, ReviewCopy> = {
     nameLabel: "Name",
     emailLabel: "Email",
     emailPlaceholder: "you@email.com",
-    nameRequired: "Enter your name.",
-    emailRequired: "Enter your email address.",
     emailInvalid: "Enter a valid email address.",
-    privacy: (brand) => `Only ${brand} sees your name and email. They are never added to your review.`,
+    detailsToggle: "Add your name & email (optional)",
+    contactOk: (brand) => `It’s okay for ${brand} to contact me about this visit.`,
+    privacy: (brand) => `Optional. Only ${brand} sees these, and they are never added to your review.`,
     brandFallback: "the business",
+    googleSteps: (r) => [
+      r ? `Tap ${r} star${r === 1 ? "" : "s"}.` : "Tap your stars.",
+      "Press and hold the text box, then Paste.",
+      "Tap Post.",
+    ],
 
     copyAndOpen: (portal) => `Copy & open ${portal}`,
     orPostOn: "or post on",
@@ -118,6 +126,7 @@ export const REVIEW_COPY: Record<Lang, ReviewCopy> = {
     copyAgain: "Copy again",
 
     claimTo: (email) => `We’ll send it to ${email}.`,
+    claimEmailLabel: "Email to send it to",
     claimSend: "Send",
     claimSent: "Sent. Check your inbox.",
     claimError: "Something went wrong. Try again.",
@@ -161,11 +170,16 @@ export const REVIEW_COPY: Record<Lang, ReviewCopy> = {
     nameLabel: "お名前",
     emailLabel: "メールアドレス",
     emailPlaceholder: "you@email.com",
-    nameRequired: "お名前を入力してください。",
-    emailRequired: "メールアドレスを入力してください。",
     emailInvalid: "メールアドレスの形式をご確認ください。",
-    privacy: (brand) => `お名前とメールアドレスは${brand}のみが確認します。レビューに掲載されることはありません。`,
+    detailsToggle: "お名前・メールアドレスを追加（任意）",
+    contactOk: (brand) => `今回のご利用について${brand}から連絡を受け取ることに同意します。`,
+    privacy: (brand) => `任意です。${brand}のみが確認し、レビューに掲載されることはありません。`,
     brandFallback: "販売元",
+    googleSteps: (r) => [
+      r ? `星${r}つをタップします。` : "星をタップします。",
+      "入力欄を長押しして「貼り付け」を選びます。",
+      "「投稿」をタップします。",
+    ],
 
     copyAndOpen: (portal) => `コピーして${portal}を開く`,
     orPostOn: "ほかの投稿先：",
@@ -178,6 +192,7 @@ export const REVIEW_COPY: Record<Lang, ReviewCopy> = {
     copyAgain: "もう一度コピー",
 
     claimTo: (email) => `${email} 宛にお送りします。`,
+    claimEmailLabel: "送付先メールアドレス",
     claimSend: "受け取る",
     claimSent: "送信しました。メールをご確認ください。",
     claimError: "エラーが発生しました。もう一度お試しください。",

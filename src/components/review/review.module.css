@@ -75,6 +75,11 @@
 .fieldErr{font-size:13px;color:var(--color-danger)}
 .privacy{font-size:13px;color:var(--color-ink-3);margin-top:8px!important;line-height:1.45}
 @media (min-width:480px){.fields{grid-template-columns:1fr 1fr}}
+.details[hidden]{display:none}
+.detailsToggle{display:block;margin:0 0 14px;padding:4px 0!important;font-size:14px;color:var(--color-ink-2)!important;text-decoration:underline;text-decoration-color:var(--color-rule);text-underline-offset:4px}
+.detailsToggle:hover{color:var(--color-carbon)!important;text-decoration-color:var(--color-carbon)}
+.optIn{display:flex;align-items:flex-start;gap:10px;margin-top:12px;font-size:14px;color:var(--color-ink-2);line-height:1.4;cursor:pointer}
+.optIn input{width:18px;height:18px;margin-top:1px;flex:none;accent-color:var(--color-carbon)}
 .go{position:relative;width:100%;height:58px;border-radius:var(--r);background:var(--color-carbon)!important;color:#fff!important;font-weight:600;font-size:17px;display:flex;align-items:center;justify-content:space-between;padding:0 20px!important;overflow:hidden;transition:background .2s}
 .go:hover{background:var(--color-carbon-deep)!important}
 .go svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8}
@@ -87,6 +92,8 @@
 .after.on{display:block}
 .after h2{font-weight:700;font-size:22px;letter-spacing:-.025em;line-height:1.15}
 .after p{color:var(--color-ink-2);font-size:15px;margin-top:6px}
+.steps{list-style:decimal;margin:12px 0 0;padding-left:22px;font-size:15px;color:var(--color-ink);line-height:1.5}
+.steps li+li{margin-top:2px}
 .row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
 .btnLine{height:44px;padding:0 16px!important;border:1px solid var(--color-ink)!important;border-radius:var(--r);font-weight:500;font-size:15px;display:inline-flex;align-items:center;gap:8px}
 .btnLine:hover{background:var(--color-ink)!important;color:#fff!important}

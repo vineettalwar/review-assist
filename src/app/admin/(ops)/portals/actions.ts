@@ -7,6 +7,7 @@ import type { Portal } from "@/db";
 import { requireAdmin } from "@/lib/auth";
 import { requireActiveBrand } from "@/lib/brand";
 import { normalizePortal } from "@/lib/compliance";
+import { toGoogleReviewUrl } from "@/lib/portals/google";
 
 export type PortalFormState = { error?: string; ok?: boolean } | null;
 
@@ -23,11 +24,16 @@ export async function savePortal(_prev: PortalFormState, formData: FormData): Pr
   const id = String(formData.get("id") ?? "");
   const type = String(formData.get("type") ?? "") as Portal["type"];
   const label = String(formData.get("label") ?? "").trim();
-  const url = String(formData.get("url") ?? "").trim();
+  let url = String(formData.get("url") ?? "").trim();
   if (!TYPES.includes(type)) return { error: "Pick a portal type." };
   if (!label) return { error: "Enter a label." };
   if (label.length > 60) return { error: "Label must be 60 characters or fewer." };
   if (url.length > 500) return { error: "That URL is too long." };
+  if (type === "google") {
+    const g = toGoogleReviewUrl(url);
+    if ("error" in g) return { error: g.error };
+    url = g.url;
+  }
   let parsed: URL;
   try {
     parsed = new URL(url);

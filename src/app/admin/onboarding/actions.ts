@@ -6,6 +6,7 @@ import { getDb, brand, products, highlights, portals, reward, examples } from "@
 import { requireAdmin } from "@/lib/auth";
 import { setActiveBrandCookie } from "@/lib/brand";
 import { normalizePortal } from "@/lib/compliance";
+import { toGoogleReviewUrl } from "@/lib/portals/google";
 import { prefillFromUrls, type PrefillResult } from "@/lib/prefill";
 import { addMemories } from "@/lib/memory";
 import { previewDraft } from "@/lib/generation";
@@ -96,9 +97,17 @@ export async function createBrandFromOnboarding(
     if (str(p.url, 500) && !isHttps(str(p.url, 500))) return { ok: false, error: `Product link for "${str(p.name, 120)}" must be https://.`, field: "products" };
   }
   const inPortals = input.portals.slice(0, MAX_PORTALS);
+  const portalUrls: string[] = [];
   for (const p of inPortals) {
     if (!PORTAL_TYPES.includes(p?.type)) return { ok: false, error: "Pick a portal type.", field: "portals" };
-    if (!isHttps(str(p.url, 500))) return { ok: false, error: `Portal "${str(p.label, 60) || p.type}" needs an https:// link.`, field: "portals" };
+    let url = str(p.url, 500);
+    if (p.type === "google") {
+      const g = toGoogleReviewUrl(url);
+      if ("error" in g) return { ok: false, error: `Google: ${g.error}`, field: "portals" };
+      url = g.url;
+    }
+    if (!isHttps(url)) return { ok: false, error: `Portal "${str(p.label, 60) || p.type}" needs an https:// link.`, field: "portals" };
+    portalUrls.push(url);
   }
 
   const now = Date.now();
@@ -138,7 +147,7 @@ export async function createBrandFromOnboarding(
       brandId: id,
       type: p.type,
       label: str(p.label, 60) || p.type,
-      url: str(p.url, 500),
+      url: portalUrls[sort],
       allowsIncentives: false,
       isDefault: true, // every portal chosen in onboarding is offered to customers; order decides the main button
       sort,

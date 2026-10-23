@@ -201,6 +201,8 @@ export const visits = sqliteTable("visits", {
   language: text("language").notNull().default("en"),
   name: text("name").notNull().default(""),
   email: text("email").notNull().default(""),
+  /** When the customer ticked the follow-up opt-in (proof of consent); null means no contact beyond a reward. */
+  contactOptInAt: integer("contact_opt_in_at"),
   rating: integer("rating").notNull().default(0),
   portalId: text("portal_id"),
   createdAt: integer("created_at").notNull(),

@@ -6,7 +6,7 @@ import { reviewCopy } from "@/lib/i18n/review";
 import s from "./review.module.css";
 
 type Highlight = { id: string; label: string; polarity: "pos" | "neg" | "both" };
-type PortalView = { id: string; label: string; url: string; incentive: boolean };
+type PortalView = { id: string; type: string; label: string; url: string; incentive: boolean };
 type Props = {
   token: string;
   /** Signed visit token; sent as `visit` in every POST body. */
@@ -49,6 +49,7 @@ export function Review(p: Props) {
   const rewardRef = useRef<HTMLDivElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
+  const claimEmailRef = useRef<HTMLInputElement>(null);
 
   const [rating, setRating] = useState(0);
   const [selected, setSelected] = useState<string[]>(p.initialSelected);
@@ -65,6 +66,11 @@ export function Review(p: Props) {
   const [name, setName] = useState(() => p.customerName.trim().slice(0, NAME_MAX));
   const [email, setEmail] = useState("");
   const [detailErr, setDetailErr] = useState({ name: "", email: "" });
+  // Name and email are optional; the fields stay collapsed so the default path is rate, copy, post.
+  const [showDetails, setShowDetails] = useState(false);
+  const [contactOk, setContactOk] = useState(false);
+  // Whether an email came with the copy; if not, the reward claim asks for one itself.
+  const [emailGiven, setEmailGiven] = useState(false);
   const [claimState, setClaimState] = useState<"idle" | "busy" | "sent">("idle");
   const [claimErr, setClaimErr] = useState("");
 
@@ -366,17 +372,16 @@ export function Review(p: Props) {
     }
   }
 
+  /** Both fields are optional; only a filled-in email has to be valid. */
   function checkDetails() {
-    const n = name.trim();
     const e = email.trim();
-    const errs = {
-      name: n ? "" : t.nameRequired,
-      email: !e ? t.emailRequired : EMAIL.test(e) && e.length <= EMAIL_MAX ? "" : t.emailInvalid,
-    };
+    const errs = { name: "", email: !e || (EMAIL.test(e) && e.length <= EMAIL_MAX) ? "" : t.emailInvalid };
     setDetailErr(errs);
-    if (errs.name) nameRef.current?.focus();
-    else if (errs.email) emailRef.current?.focus();
-    return !errs.name && !errs.email;
+    if (errs.email) {
+      setShowDetails(true);
+      emailRef.current?.focus();
+    }
+    return !errs.email;
   }
 
   // keepalive lets the save finish even if the customer leaves for the portal; one retry covers a flaky connection.
@@ -394,13 +399,17 @@ export function Review(p: Props) {
     const d = draftRef.current;
     if (!d) return;
     if (!checkDetails()) return;
+    // Open the portal in the same tap, before any await: iOS Safari blocks window.open once the gesture has passed.
+    const copied = navigator.clipboard ? navigator.clipboard.writeText(d.value) : Promise.reject(new Error("no clipboard"));
+    window.open(portal.url, "_blank", "noopener");
     let ok = true;
     try {
-      await navigator.clipboard.writeText(d.value);
+      await copied;
     } catch {
       ok = false;
     }
-    window.open(portal.url, "_blank", "noopener");
+    const mail = email.trim().slice(0, EMAIL_MAX);
+    setEmailGiven(!!mail);
     void save(JSON.stringify({
         visit: p.visit,
         portalId: portal.id,
@@ -409,7 +418,8 @@ export function Review(p: Props) {
         rating,
         edited: d.value !== lastWritten.current,
         name: name.trim().slice(0, NAME_MAX),
-        email: email.trim().slice(0, EMAIL_MAX),
+        email: mail,
+        contactOk: !!mail && contactOk,
       }));
     setChosen(portal);
     setCopyOk(ok);
@@ -435,7 +445,7 @@ export function Review(p: Props) {
     const addr = email.trim();
     if (!EMAIL.test(addr) || addr.length > EMAIL_MAX) {
       setClaimErr(t.emailInvalid);
-      emailRef.current?.focus();
+      (emailGiven ? emailRef : claimEmailRef).current?.focus();
       return;
     }
     setClaimState("busy");
@@ -574,7 +584,12 @@ export function Review(p: Props) {
 
         {primary ? (
           <section className={s.post} aria-label={t.postLabel}>
-            <fieldset className={s.details}>
+            {!showDetails ? (
+              <button type="button" className={s.detailsToggle} aria-expanded={false} onClick={() => setShowDetails(true)}>
+                {t.detailsToggle}
+              </button>
+            ) : null}
+            <fieldset className={s.details} hidden={!showDetails}>
               <legend className={s.detailsHead}>{t.detailsHeading}</legend>
               <div className={s.fields}>
                 <div className={s.field}>
@@ -585,7 +600,6 @@ export function Review(p: Props) {
                     type="text"
                     autoComplete="name"
                     maxLength={NAME_MAX}
-                    required
                     value={name}
                     aria-invalid={detailErr.name ? true : undefined}
                     aria-describedby={detailErr.name ? "cust-name-err" : undefined}
@@ -608,7 +622,6 @@ export function Review(p: Props) {
                     spellCheck={false}
                     maxLength={EMAIL_MAX}
                     placeholder={t.emailPlaceholder}
-                    required
                     value={email}
                     aria-invalid={detailErr.email ? true : undefined}
                     aria-describedby={detailErr.email ? "cust-email-err" : undefined}
@@ -621,6 +634,12 @@ export function Review(p: Props) {
                   {detailErr.email ? <p id="cust-email-err" className={s.fieldErr}>{detailErr.email}</p> : null}
                 </div>
               </div>
+              {email.trim() ? (
+                <label className={s.optIn}>
+                  <input type="checkbox" checked={contactOk} onChange={(e) => setContactOk(e.target.checked)} />
+                  <span>{t.contactOk(p.brandName || t.brandFallback)}</span>
+                </label>
+              ) : null}
               <p className={s.privacy}>{t.privacy(p.brandName || t.brandFallback)}</p>
             </fieldset>
 
@@ -644,6 +663,11 @@ export function Review(p: Props) {
             <div ref={afterRef} className={`${s.after} ${chosen ? s.on : ""}`} role="status">
               <h2>{copyOk ? t.afterCopied(chosen?.label ?? "") : t.afterNotCopied(chosen?.label ?? "")}</h2>
               <p>{t.afterThanks(thanksName)}</p>
+              {chosen?.type === "google" ? (
+                <ol className={s.steps}>
+                  {t.googleSteps(rating).map((step) => <li key={step}>{step}</li>)}
+                </ol>
+              ) : null}
               <div className={s.row}>
                 <button type="button" className={s.btnLine} onClick={() => chosen && window.open(chosen.url, "_blank", "noopener")}>
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg>{t.openAgain}
@@ -666,7 +690,26 @@ export function Review(p: Props) {
                   <div className={s.sent} role="status">{t.claimSent}</div>
                 ) : (
                   <form onSubmit={submitClaim} noValidate>
-                    <p className={s.claimTo}>{t.claimTo(email.trim())}</p>
+                    {emailGiven ? (
+                      <p className={s.claimTo}>{t.claimTo(email.trim())}</p>
+                    ) : (
+                      <input
+                        ref={claimEmailRef}
+                        type="email"
+                        inputMode="email"
+                        autoComplete="email"
+                        autoCapitalize="off"
+                        spellCheck={false}
+                        maxLength={EMAIL_MAX}
+                        aria-label={t.claimEmailLabel}
+                        placeholder={t.emailPlaceholder}
+                        value={email}
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                          if (claimErr) setClaimErr("");
+                        }}
+                      />
+                    )}
                     <button className={s.send} type="submit" disabled={claimState === "busy"}>{t.claimSend}</button>
                   </form>
                 )}

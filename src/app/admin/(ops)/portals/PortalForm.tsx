@@ -50,9 +50,29 @@ export function PortalForm({ initial }: { initial?: PortalInitial }) {
           <Input id="label" name="label" required maxLength={60} value={label} onChange={(e) => setLabel(e.target.value)} />
         </Field>
       </div>
-      <Field label="Review URL" htmlFor="url" hint="Where the customer lands to post. Must start with https://" className="mb-4">
-        <Input id="url" name="url" type="url" required placeholder="https://" defaultValue={initial?.url ?? ""} />
-      </Field>
+      {type === "google" ? (
+        <Field
+          label="Place ID or Google review link"
+          htmlFor="url"
+          hint="Opens Google's “Write a review” box. Use the link from Google Business Profile → Ask for reviews, or your Place ID."
+          className="mb-2"
+        >
+          <Input id="url" name="url" type="text" required placeholder="ChIJ… or https://g.page/r/…/review" defaultValue={initial?.url ?? ""} />
+        </Field>
+      ) : (
+        <Field label="Review URL" htmlFor="url" hint="Where the customer lands to post. Must start with https://" className="mb-4">
+          <Input id="url" name="url" type="url" required placeholder="https://" defaultValue={initial?.url ?? ""} />
+        </Field>
+      )}
+      {type === "google" && (
+        <p className="mb-4 text-xs text-ink-3">
+          Don&apos;t know your Place ID?{" "}
+          <a href="https://developers.google.com/maps/documentation/places/web-service/place-id" target="_blank" rel="noopener noreferrer" className="underline">
+            Find it with Google&apos;s Place ID Finder
+          </a>
+          .
+        </p>
+      )}
       <label className="mb-5 flex items-center gap-2.5 text-sm">
         <input
           type="checkbox" name="allowsIncentives" disabled={locked}

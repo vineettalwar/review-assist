@@ -79,7 +79,7 @@ export default async function ReviewPage({
       brandName={data.brand?.name ?? ""}
       customerName={link.kind === "customer" ? link.customerName : ""}
       highlights={highlights.map((x) => ({ id: x.id, label: lang === "ja" && x.labelJa ? x.labelJa : x.label, polarity: x.polarity }))}
-      portals={portals.map((p) => ({ id: p.id, label: p.label, url: p.url, incentive: canIncentivize(p) }))}
+      portals={portals.map((p) => ({ id: p.id, type: p.type, label: p.label, url: p.url, incentive: canIncentivize(p) }))}
       reward={reward && reward.enabled ? { title: reward.title, description: reward.description } : null}
       initialDraft={initialDraft}
       initialSelected={preselected}

@@ -34,13 +34,14 @@ export async function GET() {
   const pname = new Map(ps.map((p) => [p.id, p.name]));
   const plabel = new Map(pts.map((p) => [p.id, p.label]));
 
-  const head = ["Submitted at", "Name", "Email", "Product", "Language", "Rating", "Posted to", "Review", "Edited", "Original draft"];
+  const head = ["Submitted at", "Name", "Email", "Contact opt-in", "Product", "Language", "Rating", "Posted to", "Review", "Edited", "Original draft"];
   const lines = [head.join(",")];
   for (const v of vs) {
     const r = latest.get(v.id);
     lines.push([
       new Date(v.copiedAt ?? v.createdAt).toISOString(),
-      v.name, v.email, pname.get(v.productId) ?? "Removed product", v.language,
+      v.name, v.email, v.contactOptInAt ? new Date(v.contactOptInAt).toISOString() : "",
+      pname.get(v.productId) ?? "Removed product", v.language,
       v.rating || "", (v.portalId && plabel.get(v.portalId)) || "",
       r?.finalText ?? "", r ? (r.edited ? "yes" : "no") : "", r?.draftText ?? "",
     ].map(cell).join(","));

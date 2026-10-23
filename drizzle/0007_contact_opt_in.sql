@@ -1,0 +1,1 @@
+ALTER TABLE `visits` ADD `contact_opt_in_at` integer;

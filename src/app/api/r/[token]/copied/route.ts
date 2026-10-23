@@ -31,8 +31,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   ) {
     return NextResponse.json({ error: "Invalid input." }, { status: 400 });
   }
-  if (!name || name.length > 80) return NextResponse.json({ error: "Enter your name.", field: "name" }, { status: 400 });
-  if (email.length > 254 || !EMAIL.test(email)) return NextResponse.json({ error: "Enter a valid email address.", field: "email" }, { status: 400 });
+  // Name and email are optional; an email that is given must be valid.
+  if (name.length > 80) return NextResponse.json({ error: "Name is too long.", field: "name" }, { status: 400 });
+  if (email && (email.length > 254 || !EMAIL.test(email))) return NextResponse.json({ error: "Enter a valid email address.", field: "email" }, { status: 400 });
 
   const link = await getLinkByToken(token);
   if (!link || link.status === "disabled") return NextResponse.json({ error: "Link not active." }, { status: 404 });
@@ -43,12 +44,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
 
   const db = await getDb();
   const now = Date.now();
+  // Consent only counts with an email to contact and an explicit tick; the timestamp is the record of it.
+  const contactOptInAt = email && body?.contactOk === true ? now : null;
   const [[{ n }]] = await Promise.all([
     db.select({ n: count() }).from(submissions).where(and(eq(submissions.linkId, link.id), eq(submissions.visitId, visit.visitId))),
     db
       .insert(visits)
-      .values({ id: visit.visitId, linkId: link.id, brandId: link.brandId, productId: link.productId, language: visit.lang, name, email, rating, portalId, createdAt: now, copiedAt: now })
-      .onConflictDoUpdate({ target: visits.id, set: { name, email, rating, portalId, copiedAt: now } }),
+      .values({ id: visit.visitId, linkId: link.id, brandId: link.brandId, productId: link.productId, language: visit.lang, name, email, contactOptInAt, rating, portalId, createdAt: now, copiedAt: now })
+      .onConflictDoUpdate({ target: visits.id, set: { name, email, contactOptInAt, rating, portalId, copiedAt: now } }),
     db
       .update(links)
       .set({ portalId, copiedAt: now, ...(link.status === "claimed" || link.kind === "product" ? {} : { status: "copied" as const }) })
