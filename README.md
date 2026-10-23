@@ -7,7 +7,7 @@ Next.js 15 (App Router) on Cloudflare Workers via `@opennextjs/cloudflare`, D1 +
 bun install
 cp .dev.vars.example .dev.vars        # set ADMIN_PASSWORD and SESSION_SECRET
 bun run db:migrate:local              # create tables in the local D1
-bun run db:seed:local                 # demo data (Lopez Dental; product links demo241abc / demo242def / demo243ghi)
+bun run db:seed:local                 # demo data: Some Tech Work (stwdemo001–004) and Lopez Dental (demo241abc / demo242def / demo243ghi)
 bun run dev                           # http://localhost:3000/admin  (customer page: /r/demo241abc)
 ```
 
