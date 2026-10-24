@@ -24,7 +24,9 @@ type ClientFile = {
     id: string; name: string; category?: string; url?: string; market?: string; priority?: number; knowledge?: string[];
     avoid?: string[]; audience?: string; portals?: string[]; highlights?: (Highlight | string)[]; linkToken?: string;
   }[];
-  inspirations?: { id: string; text: string; note?: string; productId?: string | null }[];
+  inspirations?: { id: string; text: string; note?: string; productId?: string | null; active?: boolean }[];
+  /** Remembered notes that reach every prompt (style, avoid, fact); loaded as active. */
+  memories?: { id: string; kind: "fact" | "style" | "avoid"; text: string; productId?: string | null; evidence?: string }[];
 };
 
 const dir = process.argv[2];
@@ -94,7 +96,14 @@ if (ids) sql.push(`DELETE FROM highlights WHERE product_id IN (${ids})${keepHl.l
 for (const x of data.inspirations ?? []) {
   sql.push(
     `INSERT OR REPLACE INTO inspirations (id,brand_id,product_id,text,note,active,created_at) VALUES (` +
-      [x.id, b.id, x.productId ?? null, x.text, x.note ?? "", true, now].map(q).join(",") + `);`,
+      [x.id, b.id, x.productId ?? null, x.text, x.note ?? "", x.active ?? true, now].map(q).join(",") + `);`,
+  );
+}
+
+for (const m of data.memories ?? []) {
+  sql.push(
+    `INSERT OR REPLACE INTO memories (id,brand_id,product_id,kind,text,source,status,evidence,created_at,updated_at) VALUES (` +
+      [m.id, b.id, m.productId ?? null, m.kind, m.text, "admin", "active", m.evidence ?? "", now, now].map(q).join(",") + `);`,
   );
 }
 

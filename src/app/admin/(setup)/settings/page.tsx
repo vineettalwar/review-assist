@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
 import { PageHeader, Section, Field, Input, Textarea, Note, Pill, SubmitButton } from "@/components/ui";
 import { getDb, settings } from "@/db";
-import { PROVIDERS, getAiStatus, type ProviderId } from "@/lib/ai";
+import { PROVIDERS, getAiStatus, listModels, type ModelOption, type ProviderId } from "@/lib/ai";
+import { ModelSelect } from "../../ModelSelect";
 import type { ProviderState } from "@/lib/ai";
 import { Flash } from "../flash";
 import { activateAi, connectAi, disconnectAi, saveAiModel, saveFocus, saveLanguages, saveSettings, testAi } from "./actions";
@@ -14,6 +15,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
   const sp = await searchParams;
   const db = await getDb();
   const [[s], ai, brands] = await Promise.all([db.select().from(settings).where(eq(settings.id, "default")), getAiStatus(), listBrands()]);
+  const catalog = await listModels();
   const active = ai.active;
   const langs = parseLanguages(s?.languages);
 
@@ -33,7 +35,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
         <Section title="AI providers" description="Keys are stored encrypted and never shown again.">
           <div className="grid gap-3">
             {ai.providers.map((p) => (
-              <ProviderRow key={p.id} p={p} isActive={active?.id === p.id} />
+              <ProviderRow key={p.id} p={p} isActive={active?.id === p.id} options={catalog[p.id]} />
             ))}
           </div>
         </Section>
@@ -103,17 +105,11 @@ function Hidden({ id }: { id: ProviderId }) {
   return <input type="hidden" name="provider" value={id} />;
 }
 
-function ModelInput({ p, id }: { p: ProviderState; id: string }) {
-  const meta = PROVIDERS[p.id];
-  return (
-    <>
-      <Input id={id} name="model" list={`${id}-list`} defaultValue={p.model} autoComplete="off" spellCheck={false} className="font-mono text-[13px]" />
-      <datalist id={`${id}-list`}>{meta.models.map((m) => <option key={m} value={m} />)}</datalist>
-    </>
-  );
+function ModelInput({ p, id, options }: { p: ProviderState; id: string; options: ModelOption[] }) {
+  return <ModelSelect id={id} name="model" options={options} defaultValue={p.model} />;
 }
 
-function ProviderRow({ p, isActive }: { p: ProviderState; isActive: boolean }) {
+function ProviderRow({ p, isActive, options }: { p: ProviderState; isActive: boolean; options: ModelOption[] }) {
   const meta = PROVIDERS[p.id];
   const fid = `ai-${p.id}`;
   return (
@@ -136,7 +132,7 @@ function ProviderRow({ p, isActive }: { p: ProviderState; isActive: boolean }) {
             <Hidden id={p.id} />
             <div className="min-w-[220px] flex-1">
               <label htmlFor={`${fid}-model`} className="mb-1.5 block text-[13px] font-medium">Model</label>
-              <ModelInput p={p} id={`${fid}-model`} />
+              <ModelInput p={p} id={`${fid}-model`} options={options} />
             </div>
             <SubmitButton variant="line" pending="Testing…">Save model</SubmitButton>
           </form>
@@ -158,8 +154,8 @@ function ProviderRow({ p, isActive }: { p: ProviderState; isActive: boolean }) {
             <Field label="API key" htmlFor={`${fid}-key`} hint={<>{meta.keyHelp}. <a href={meta.keyUrl} target="_blank" rel="noreferrer" className="underline underline-offset-2">Get a key</a></>}>
               <Input id={`${fid}-key`} name="apiKey" type="password" autoComplete="off" spellCheck={false} required placeholder="Paste key" />
             </Field>
-            <Field label="Model" htmlFor={`${fid}-model`} hint="Pick a suggestion or type any id.">
-              <ModelInput p={p} id={`${fid}-model`} />
+            <Field label="Model" htmlFor={`${fid}-model`} hint="Every model this provider offers. Pick Other to type any id.">
+              <ModelInput p={p} id={`${fid}-model`} options={options} />
             </Field>
           </div>
           <div><SubmitButton pending="Testing the key…">Connect {meta.label}</SubmitButton></div>

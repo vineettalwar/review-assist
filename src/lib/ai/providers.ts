@@ -20,7 +20,7 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
     keyHelp: "Starts with sk-or-",
     keyUrl: "https://openrouter.ai/settings/keys",
     defaultModel: "openai/gpt-4o-mini",
-    models: ["openai/gpt-4o-mini", "google/gemini-2.5-flash", "anthropic/claude-haiku-4.5", "meta-llama/llama-3.3-70b-instruct"],
+    models: ["openai/gpt-4o-mini", "google/gemini-2.5-flash", "anthropic/claude-haiku-5.5", "anthropic/claude-haiku-4.5", "meta-llama/llama-3.3-70b-instruct"],
   },
   anthropic: {
     id: "anthropic",
@@ -172,8 +172,9 @@ export async function callProvider(id: ProviderId, key: string, prompt: { system
     const r = await postWithRetry(
       "https://api.anthropic.com/v1/messages",
       { "x-api-key": key, "anthropic-version": "2023-06-01" },
-      { model: cfg.model, max_tokens: cfg.maxTokens, temperature: cfg.temperature, system: prompt.system, messages: [{ role: "user", content: prompt.user }] },
-      ["temperature"],
+      // No thinking for short drafts (it would eat the token budget); dropped and retried if a model rejects the setting.
+      { model: cfg.model, max_tokens: cfg.maxTokens, temperature: cfg.temperature, thinking: { type: "disabled" }, system: prompt.system, messages: [{ role: "user", content: prompt.user }] },
+      ["temperature", "thinking"],
       timeout,
     );
     return finish(
@@ -196,13 +197,16 @@ export async function callProvider(id: ProviderId, key: string, prompt: { system
     return finish(r, pickChat, id, cfg.model);
   }
 
-  const r = await postWithRetry(
-    "https://openrouter.ai/api/v1/chat/completions",
-    { Authorization: `Bearer ${key}`, ...(cfg.appUrl ? { "HTTP-Referer": cfg.appUrl } : {}), "X-Title": "Review Assist" },
-    // usage.include makes OpenRouter report the billed cost alongside the token counts.
-    { model: cfg.model, temperature: cfg.temperature, max_tokens: cfg.maxTokens, messages, usage: { include: true } },
-    ["temperature"],
-    timeout,
-  );
+  const orHeaders = { Authorization: `Bearer ${key}`, ...(cfg.appUrl ? { "HTTP-Referer": cfg.appUrl } : {}), "X-Title": "Review Assist" };
+  // usage.include makes OpenRouter report the billed cost alongside the token counts.
+  // Thinking is switched off: a short review gains nothing from it, and models like Claude Haiku 5.5 would otherwise
+  // spend the whole token budget thinking and return no text. Models that must reason reject this, and the retry drops it.
+  const orBody: Body = { model: cfg.model, temperature: cfg.temperature, max_tokens: cfg.maxTokens, messages, usage: { include: true }, reasoning: { enabled: false } };
+  let r = await postWithRetry("https://openrouter.ai/api/v1/chat/completions", orHeaders, orBody, ["temperature", "reasoning"], timeout);
+  const cut = (j: unknown) => (j as { choices?: { finish_reason?: string }[] } | null)?.choices?.[0]?.finish_reason === "length";
+  if ("json" in r && r.status === 200 && !pickChat(r.json).trim() && cut(r.json)) {
+    // A reasoning-only model used the budget on thinking: once more with room for both, and as little thinking as allowed.
+    r = await postWithRetry("https://openrouter.ai/api/v1/chat/completions", orHeaders, { ...orBody, max_tokens: cfg.maxTokens + 2000, reasoning: { effort: "low" } }, ["temperature", "reasoning"], timeout);
+  }
   return finish(r, pickChat, id, cfg.model);
 }

@@ -44,7 +44,7 @@ export function buildPrompt(i: PromptInput): { system: string; user: string } {
       ? "- Write in natural Japanese, the way a Japanese customer writes a Google or shop review: polite but not stiff (です/ます), Japanese punctuation (、。), no translated-from-English phrasing, no romaji. Keep the product name as written."
       : de
         ? "- Write in natural German, the way a German customer writes a Google or shop review: \"ich\" form, everyday words, correct German spelling, capitalisation and punctuation, no anglicisms and no phrasing translated from English. Do not address the reader. Keep product names as written."
-        : `- Write in this language: ${lang}.`,
+        : `- Write in ${languageName(lang)}.`,
     "- Only use the facts provided below. Never invent prices, staff names, dates, or medical or health claims.",
     `- ${ratingRule(rating)} Match this rating honestly.`,
     "- Weave the chosen highlights in naturally. Highlights that describe problems must be stated as problems, never spun as positives.",
@@ -107,8 +107,16 @@ export function buildPrompt(i: PromptInput): { system: string; user: string } {
   return { system: sys.join("\n"), user: buildUser(i) };
 }
 
+const LANG_NAME: Record<string, string> = { en: "English", de: "German", ja: "Japanese" };
+
+/** The draft's language by name, for instructions; examples in other languages must not pull the draft into theirs. */
+export function languageName(code: string) {
+  return LANG_NAME[code] ?? code;
+}
+
 function buildUser(i: PromptInput) {
   const { product, link, rating, length, examples, variant } = i;
+  const langName = languageName(link.language || i.brand?.defaultLanguage || "en");
   const strict = !!i.brand?.strict;
   const situations = i.highlights.filter((h) => h.kind === "situation");
   const highlights = i.highlights.filter((h) => h.kind !== "situation");
@@ -151,7 +159,7 @@ function buildUser(i: PromptInput) {
   );
   if (examples.length) {
     u.push(
-      "Examples of the style wanted (do not copy them):\n" +
+      `Examples of the style wanted (do not copy them; some may be in another language, but you write in ${langName}):\n` +
         examples.map((e) => `[${e.rating} stars] ${e.text}`).join("\n"),
     );
   }
@@ -159,8 +167,8 @@ function buildUser(i: PromptInput) {
   if (insp.length) {
     u.push(
       (strict
-        ? "Writing the business likes (take only its order and rhythm. Its slots are not topics: fill a slot only with what the customer picked or wrote, and drop every other slot. Never copy its wording):\n"
-        : "Writing the business likes (take tone, rhythm and structure only. Never copy its wording, and never use facts, names or numbers from it):\n") +
+        ? `Writing the business likes (take only its order and rhythm. Its slots are not topics: fill a slot only with what the customer picked or wrote, and drop every other slot. Never copy its wording. It may be in another language; you write in ${langName}):\n`
+        : `Writing the business likes (take tone, rhythm and structure only. Never copy its wording, and never use facts, names or numbers from it. It may be in another language; you write in ${langName}):\n`) +
         insp.map((x) => `${x.note ? `- What they like about it: ${x.note}\n` : "- "}  """${x.text}"""`).join("\n"),
     );
   }
@@ -169,6 +177,6 @@ function buildUser(i: PromptInput) {
   if (used.length) u.push(`Openings other customers already used (do not start like these, do not reuse their wording):\n${used.map((o) => `- ${o}…`).join("\n")}`);
   if (variant > 0) u.push(`This is alternative number ${variant + 1}: use different wording and structure from earlier drafts.`);
   if (i.retryNote) u.push(i.retryNote);
-  u.push(`Write the ${length} review now.`);
+  u.push(`Write the ${length} review now, in ${langName}.`);
   return u.join("\n\n");
 }

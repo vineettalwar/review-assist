@@ -76,6 +76,8 @@ async function produce(
   const s = ctx.settings;
   const extra = s?.systemPromptExtra?.trim();
   const pool = focusPool(ctx);
+  // Style examples count as earlier text too, so a draft that copies one is rewritten like any near-duplicate.
+  const against = [...corpus, ...ctx.inspirations.map((i) => i.text)];
   const usedOpenings = [...new Set(corpus.slice(0, 30).map(opening).filter(Boolean))].slice(0, 12);
   let best: { text: string; model: string; uniq: Uniqueness } | null = null;
   let retryNote = "";
@@ -102,7 +104,7 @@ async function produce(
     const out = await complete(prompt, { temperature, maxTokens: s?.maxTokens ?? 400 }, { source, brandId: ctx.product.brandId });
     if (!out) break; // no provider or the call failed: fall through to the demo writer
     out.text = humanize(out.text);
-    const uniq = checkUnique(out.text, corpus);
+    const uniq = checkUnique(out.text, against);
     if (!best || uniq.score < best.uniq.score || (best.uniq.sameOpening && !uniq.sameOpening)) best = { text: out.text, model: out.model, uniq };
     if (!tooSimilar(uniq, out.text)) return { text: out.text, model: out.model, uniq };
     retryNote = "Your previous attempt was too close to another customer's review. Start differently, pick a different detail and change the sentence structure.";
@@ -112,7 +114,7 @@ async function produce(
   let demo: { text: string; uniq: Uniqueness } | null = null;
   for (let i = 0; i < DEMO_CANDIDATES; i++) {
     const text = humanize(demoGenerate({ productName: ctx.product.name, rating, highlights: ctx.highlights, length, seed: `${seed}:d${i}`, lang: ctx.lang }));
-    const uniq = checkUnique(text, corpus);
+    const uniq = checkUnique(text, against);
     if (!demo || uniq.score < demo.uniq.score) demo = { text, uniq };
     if (!tooSimilar(uniq, text)) break;
   }

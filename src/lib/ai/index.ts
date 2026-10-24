@@ -285,3 +285,93 @@ export async function setActiveProvider(id: ProviderId | ""): Promise<void> {
   if (s) await db.update(settings).set({ provider: id }).where(eq(settings.id, "default"));
   else await db.insert(settings).values({ id: "default", provider: id });
 }
+
+/** One choice in a model dropdown. Prices are USD per million tokens when the provider publishes them. */
+export interface ModelOption {
+  id: string;
+  name: string;
+  group: string;
+  inPerM: number | null;
+  outPerM: number | null;
+}
+
+export type ModelCatalog = Record<ProviderId, ModelOption[]>;
+
+const CATALOG_TTL = 60 * 60 * 1000;
+let catalogCache: { at: number; data: ModelCatalog } | null = null;
+
+// Chat models only: OpenAI's list also holds embeddings, audio, image and moderation models.
+const OPENAI_CHAT = /^(gpt-|o\d|chatgpt-)/;
+const OPENAI_SKIP = /(audio|realtime|tts|transcribe|embedding|image|search|moderation|instruct|codex)/;
+
+const suggested = (id: ProviderId): ModelOption[] =>
+  PROVIDERS[id].models.map((m) => ({ id: m, name: m, group: "Suggested", inPerM: null, outPerM: null }));
+
+async function getJson(url: string, headers: Record<string, string> = {}): Promise<unknown> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8_000);
+  try {
+    const res = await fetch(url, { headers, signal: ctrl.signal });
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchCatalog(id: ProviderId, key: string | null): Promise<ModelOption[]> {
+  const perM = (v: unknown) => {
+    const n = typeof v === "string" ? Number(v) : typeof v === "number" ? v : NaN;
+    return Number.isFinite(n) && n >= 0 ? Math.round(n * 1e6 * 1000) / 1000 : null;
+  };
+  if (id === "openrouter") {
+    // The model list is public, so it loads even before a key is connected.
+    type Row = { id: string; name?: string; pricing?: { prompt?: string; completion?: string }; architecture?: { output_modalities?: string[] } };
+    const j = (await getJson("https://openrouter.ai/api/v1/models")) as { data?: Row[] } | null;
+    return (j?.data ?? [])
+      .filter((m) => typeof m.id === "string" && (m.architecture?.output_modalities ?? ["text"]).includes("text"))
+      .map((m) => ({
+        id: m.id,
+        name: (m.name ?? m.id).replace(/^[^:]+:\s*/, ""),
+        group: (m.id.split("/")[0] ?? "other").replace(/^~/, ""),
+        inPerM: perM(m.pricing?.prompt),
+        outPerM: perM(m.pricing?.completion),
+      }));
+  }
+  if (!key) return [];
+  if (id === "anthropic") {
+    const j = (await getJson("https://api.anthropic.com/v1/models?limit=1000", { "x-api-key": key, "anthropic-version": "2023-06-01" })) as
+      | { data?: { id: string; display_name?: string }[] }
+      | null;
+    return (j?.data ?? []).map((m) => ({ id: m.id, name: m.display_name ?? m.id, group: "Claude", inPerM: null, outPerM: null }));
+  }
+  const j = (await getJson("https://api.openai.com/v1/models", { Authorization: `Bearer ${key}` })) as { data?: { id: string }[] } | null;
+  return (j?.data ?? [])
+    .filter((m) => OPENAI_CHAT.test(m.id) && !OPENAI_SKIP.test(m.id))
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .map((m) => ({ id: m.id, name: m.id, group: "OpenAI", inPerM: null, outPerM: null }));
+}
+
+/**
+ * Every model each provider offers, for the model dropdowns. The suggested models come first so the usual
+ * choices stay one click away; if a provider can't be reached its list falls back to the suggestions. Keys never leave the server.
+ */
+export async function listModels(): Promise<ModelCatalog> {
+  if (catalogCache && Date.now() - catalogCache.at < CATALOG_TTL) return catalogCache.data;
+  const { rows, env } = await load();
+  const entries = await Promise.all(
+    PROVIDER_ORDER.map(async (id) => {
+      const k = await readKey(env, rows.find((r) => r.id === id), id).catch(() => null);
+      const all = await fetchCatalog(id, k?.key ?? null).catch(() => []);
+      const byId = new Map(all.map((m) => [m.id, m]));
+      const top = suggested(id).map((s) => ({ ...(byId.get(s.id) ?? s), group: "Suggested" }));
+      const rest = all.filter((m) => !PROVIDERS[id].models.includes(m.id)).sort((a, b) => a.group.localeCompare(b.group) || a.name.localeCompare(b.name));
+      return [id, [...top, ...rest]] as const;
+    }),
+  );
+  const data = Object.fromEntries(entries) as ModelCatalog;
+  // Only cache a complete answer, so a provider that was briefly down is retried on the next page load.
+  if (entries.every(([id, list]) => list.length > PROVIDERS[id].models.length || id !== "openrouter")) catalogCache = { at: Date.now(), data };
+  return data;
+}

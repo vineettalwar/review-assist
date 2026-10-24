@@ -3,7 +3,8 @@ import { and, asc, desc, eq, gte, inArray } from "drizzle-orm";
 import { PageHeader, Section } from "@/components/ui";
 import { getDb, products, highlights, examples, memories, inspirations, settings, aiUsage } from "@/db";
 import { requireActiveBrand } from "@/lib/brand";
-import { getAiStatus, openRouterBalance, PROVIDERS, type OpenRouterBalance } from "@/lib/ai";
+import { getAiStatus, listModels, openRouterBalance, PROVIDERS, type OpenRouterBalance } from "@/lib/ai";
+import { marketLang } from "@/lib/i18n/languages";
 import { LANGUAGES } from "../constants";
 import { parseRules } from "@/lib/rules";
 import { TrainingLab, type LabProvider } from "./TrainingLab";
@@ -17,7 +18,7 @@ export default async function TrainingPage() {
   const active = await requireActiveBrand();
   const db = await getDb();
   const since = Date.now() - 30 * DAY;
-  const [ps, ai, insp, likes, rules, [st], balance, usage] = await Promise.all([
+  const [ps, ai, insp, likes, rules, [st], balance, usage, catalog] = await Promise.all([
     db.select({ id: products.id, name: products.name, market: products.market }).from(products).where(eq(products.brandId, active.id)).orderBy(asc(products.market), asc(products.createdAt)),
     getAiStatus(),
     db.select().from(inspirations).where(eq(inspirations.brandId, active.id)).orderBy(desc(inspirations.createdAt)),
@@ -39,6 +40,7 @@ export default async function TrainingPage() {
       .where(gte(aiUsage.createdAt, since))
       .orderBy(desc(aiUsage.createdAt))
       .limit(20_000),
+    listModels(),
   ]);
   const hs = ps.length
     ? await db.select().from(highlights).where(inArray(highlights.productId, ps.map((p) => p.id))).orderBy(asc(highlights.sort))
@@ -67,7 +69,9 @@ export default async function TrainingPage() {
       <RulesBar count={clientRules.draft.length} strict={active.strict} />
       <TrainingLab
         currentExtra={st?.extra ?? ""}
+        catalog={catalog}
         products={ps.map((p) => ({
+          lang: marketLang(p.market) ?? undefined,
           id: p.id,
           name: p.market ? `${p.name} (${p.market})` : p.name,
           highlights: hs.filter((h) => h.productId === p.id).map((h) => ({ id: h.id, label: h.label, polarity: h.polarity })),

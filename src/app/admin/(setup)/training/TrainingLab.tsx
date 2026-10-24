@@ -9,9 +9,12 @@ import {
 } from "./actions";
 import { proposeFromPlayground } from "../memory/actions";
 import { DISLIKE_REASONS } from "./reasons";
+import { ModelSelect } from "../../ModelSelect";
+import type { ModelCatalog } from "@/lib/ai";
 
 type Polarity = "pos" | "neg" | "both";
-type LabProduct = { id: string; name: string; highlights: { id: string; label: string; polarity: Polarity }[] };
+/** `lang` is the market language (US English, Germany German); picking the product switches to it. */
+type LabProduct = { id: string; name: string; lang?: string; highlights: { id: string; label: string; polarity: Polarity }[] };
 export type LabProvider = { id: "openrouter" | "anthropic" | "openai"; label: string; connected: boolean; model: string; models: string[] };
 type LabInspiration = { id: string; text: string; note: string; active: boolean; scope: string | null };
 type ColumnSetup = { provider: string; model: string };
@@ -22,6 +25,7 @@ type Tally = { drafts: number; input: number; output: number; cost: number; pric
 const STAR = "M12 2.8l2.75 5.9 6.45.75-4.78 4.4 1.27 6.38L12 17.05 6.31 20.23l1.27-6.38L2.8 9.45l6.45-.75z";
 const TALLY_KEY = "ra-training-usage";
 const EMPTY: Draft = { text: "", original: "", result: null, request: "" };
+const COLS = "ABC";
 
 const money = (n: number) => (n === 0 ? "$0" : n < 0.01 ? `$${n.toPrecision(2)}` : `$${n.toFixed(3)}`);
 const num = (n: number) => n.toLocaleString("en-US");
@@ -45,7 +49,7 @@ function readTally(): Record<string, Tally> {
 }
 
 export function TrainingLab({
-  products, languages, defaultLanguage, providers, activeProvider, inspirations, currentExtra,
+  products, languages, defaultLanguage, providers, activeProvider, inspirations, currentExtra, catalog,
 }: {
   products: LabProduct[];
   languages: readonly { value: string; label: string }[];
@@ -55,24 +59,30 @@ export function TrainingLab({
   inspirations: LabInspiration[];
   /** Settings extra instructions now applied to every customer draft. */
   currentExtra: string;
+  /** Every model each provider offers, for the dropdowns. */
+  catalog: ModelCatalog;
 }) {
   const router = useRouter();
   const [productId, setProductId] = useState(products[0]?.id ?? "");
   const [rating, setRating] = useState(5);
   const [picked, setPicked] = useState<string[]>([]);
   const [length, setLength] = useState<"short" | "detailed">("short");
-  const [language, setLanguage] = useState(defaultLanguage);
+  const [language, setLanguage] = useState(products[0]?.lang || defaultLanguage);
   const [notes, setNotes] = useState("");
   const [variant, setVariant] = useState(0);
   const [scope, setScope] = useState<"brand" | "product">("brand");
 
   const firstProvider = providers.find((p) => p.id === activeProvider) ?? providers.find((p) => p.connected) ?? providers[0];
   const [cols, setCols] = useState<ColumnSetup[]>(() => {
+    const prov = firstProvider?.id ?? "openrouter";
+    const list = firstProvider?.models ?? [];
     const a = firstProvider?.model ?? "";
-    const b = firstProvider?.models.find((m) => m !== a) ?? a;
-    return [{ provider: firstProvider?.id ?? "openrouter", model: a }, { provider: firstProvider?.id ?? "openrouter", model: b }];
+    // Claude Haiku is always one of the three, so it can be compared against the current model.
+    const haiku = list.find((m) => /haiku/i.test(m) && m !== a) ?? list.find((m) => m !== a) ?? a;
+    const b = list.find((m) => m !== a && m !== haiku) ?? a;
+    return [{ provider: prov, model: a }, { provider: prov, model: b }, { provider: prov, model: haiku }];
   });
-  const [drafts, setDrafts] = useState<Draft[]>([EMPTY, EMPTY]);
+  const [drafts, setDrafts] = useState<Draft[]>([EMPTY, EMPTY, EMPTY]);
   const [fallback, setFallback] = useState<Draft>(EMPTY);
   const [msg, setMsg] = useState<{ tone: "error" | "ok"; text: string } | null>(null);
   const [tally, setTally] = useState<Record<string, Tally>>({});
@@ -139,7 +149,15 @@ export function TrainingLab({
       <div className="grid gap-4 rounded border border-rule p-5">
         <div className="grid gap-4 md:grid-cols-2">
           <Field label="Service" htmlFor="tl-product">
-            <Select id="tl-product" value={productId} onChange={(e) => { setProductId(e.target.value); setPicked([]); }}>
+            <Select
+              id="tl-product" value={productId}
+              onChange={(e) => {
+                setProductId(e.target.value);
+                setPicked([]);
+                const lang = products.find((p) => p.id === e.target.value)?.lang;
+                if (lang) setLanguage(lang);
+              }}
+            >
               {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </Select>
           </Field>
@@ -191,10 +209,10 @@ export function TrainingLab({
         <Field label="Sample customer notes" htmlFor="tl-notes" hint="Optional. What this customer said about their experience.">
           <Textarea id="tl-notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Went live a week late, but editors love the new blocks." />
         </Field>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 lg:grid-cols-3">
           {cols.map((c, i) => (
             <div key={i} className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-2">
-              <Field label={`Model ${i === 0 ? "A" : "B"} provider`} htmlFor={`tl-prov-${i}`}>
+              <Field label={`Model ${COLS[i]} provider`} htmlFor={`tl-prov-${i}`}>
                 <Select
                   id={`tl-prov-${i}`} value={c.provider}
                   onChange={(e) => setCols((all) => all.map((x, j) => (j === i ? { provider: e.target.value, model: providerById(e.target.value)?.model ?? "" } : x)))}
@@ -203,11 +221,11 @@ export function TrainingLab({
                 </Select>
               </Field>
               <Field label="Model" htmlFor={`tl-model-${i}`}>
-                <Input
-                  id={`tl-model-${i}`} list={`tl-models-${i}`} value={c.model} spellCheck={false} autoComplete="off" className="font-mono text-[13px]"
-                  onChange={(e) => setCols((all) => all.map((x, j) => (j === i ? { ...x, model: e.target.value } : x)))}
+                <ModelSelect
+                  id={`tl-model-${i}`} value={c.model}
+                  options={catalog[c.provider as keyof ModelCatalog] ?? []}
+                  onChange={(model) => setCols((all) => all.map((x, j) => (j === i ? { ...x, model } : x)))}
                 />
-                <datalist id={`tl-models-${i}`}>{(providerById(c.provider)?.models ?? []).map((m) => <option key={m} value={m} />)}</datalist>
               </Field>
             </div>
           ))}
@@ -222,11 +240,11 @@ export function TrainingLab({
       </div>
 
       {/* Columns */}
-      <div className="grid gap-5 lg:grid-cols-3">
+      <div className="grid gap-5 md:grid-cols-2 2xl:grid-cols-4">
         {drafts.map((d, i) => (
           <DraftColumn
             key={i}
-            title={`Model ${i === 0 ? "A" : "B"}`}
+            title={`Model ${COLS[i]}`}
             subtitle={d.result ? d.result.model : cols[i].model}
             draft={d}
             onText={(text) => setDrafts((all) => all.map((x, j) => (j === i ? { ...x, text } : x)))}

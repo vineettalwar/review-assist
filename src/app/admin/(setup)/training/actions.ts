@@ -113,7 +113,7 @@ export async function runTraining(input: PreviewInput, columns: TrainingColumn[]
   const active = await activeOrRedirect();
   const req = await ownedPreview(input, active.id);
   if (!req) return { ok: false, error: "Pick a service from this brand first." };
-  const cols = (Array.isArray(columns) ? columns : []).slice(0, 2);
+  const cols = (Array.isArray(columns) ? columns : []).slice(0, 3);
   try {
     const t = await trainingPrompt(req);
     const prompt = { system: withExtra(t.prompt.system, t.extra), user: t.prompt.user };
