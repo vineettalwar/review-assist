@@ -107,6 +107,13 @@ function buildUser(i: PromptInput) {
         examples.map((e) => `[${e.rating} stars] ${e.text}`).join("\n"),
     );
   }
+  const insp = i.inspirations ?? [];
+  if (insp.length) {
+    u.push(
+      "Writing the business likes (take tone, rhythm and structure only. Never copy its wording, and never use facts, names or numbers from it):\n" +
+        insp.map((x) => `${x.note ? `- What they like about it: ${x.note}\n` : "- "}  """${x.text}"""`).join("\n"),
+    );
+  }
   if (i.plan) u.push(i.plan);
   const used = (i.usedOpenings ?? []).filter(Boolean).slice(0, 12);
   if (used.length) u.push(`Openings other customers already used (do not start like these, do not reuse their wording):\n${used.map((o) => `- ${o}…`).join("\n")}`);

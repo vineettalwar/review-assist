@@ -3,9 +3,9 @@ import { eq } from "drizzle-orm";
 import { aiProviders, getDb, settings, type AiProviderRow } from "@/db";
 import { getEnv, type AppEnv } from "@/lib/env";
 import { decryptSecret, encryptSecret } from "./crypto";
-import { PROVIDERS, PROVIDER_ORDER, callProvider, isProviderId, type CallResult, type ProviderId } from "./providers";
+import { PROVIDERS, PROVIDER_ORDER, callProvider, isProviderId, type CallResult, type ProviderId, type Usage } from "./providers";
 
-export { PROVIDERS, PROVIDER_ORDER, isProviderId, cleanOutput, type ProviderId } from "./providers";
+export { PROVIDERS, PROVIDER_ORDER, isProviderId, cleanOutput, type ProviderId, type Usage } from "./providers";
 
 const ENV_KEY: Record<ProviderId, keyof AppEnv> = {
   openrouter: "OPENROUTER_API_KEY",
@@ -114,6 +114,29 @@ export async function complete(
     await recordResult(ai.id, r, row).catch(() => {});
   }
   return r.ok ? { text: r.text, provider: ai.id, model: ai.model } : null;
+}
+
+export type CompleteWithResult =
+  | { ok: true; text: string; usage: Usage | null; ms: number; provider: ProviderId; model: string }
+  | { ok: false; error: string; ms: number; provider: ProviderId; model: string };
+
+/**
+ * Run a prompt on a specific provider and model (the Training page compares two side by side).
+ * Unlike complete(), failures come back as errors instead of null, and usage is reported.
+ */
+export async function completeWith(
+  target: { provider: ProviderId; model: string },
+  prompt: { system: string; user: string },
+  cfg: { temperature: number; maxTokens: number; timeoutMs?: number },
+): Promise<CompleteWithResult> {
+  const { provider, model } = target;
+  const { rows, env } = await load();
+  const k = await readKey(env, rows.find((r) => r.id === provider), provider);
+  if (!k) return { ok: false, error: `No ${PROVIDERS[provider].label} key is connected.`, ms: 0, provider, model };
+  const t0 = Date.now();
+  const r = await callProvider(provider, k.key, prompt, { ...cfg, model, appUrl: env.APP_URL });
+  const ms = Date.now() - t0;
+  return r.ok ? { ok: true, text: r.text, usage: r.usage ?? null, ms, provider, model } : { ok: false, error: r.error, ms, provider, model };
 }
 
 /** A tiny real request, used before saving a key and by the Test button. */

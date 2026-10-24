@@ -78,6 +78,7 @@ async function produce(
       product: ctx.product,
       examples: ctx.examples,
       memory: ctx.memory,
+      inspirations: ctx.inspirations,
       link,
       rating,
       highlights: ctx.highlights,
@@ -140,6 +141,40 @@ export async function generateDraft(req: DraftRequest): Promise<DraftResult> {
   const out = await produce(ctx, { ...link, language: lang }, req.rating, req.length, req.variant, seed, corpus);
   await storeDraft({ ...key, productId: link.productId, text: out.text, model: out.model });
   return { text: out.text, model: out.model, cached: false };
+}
+
+/**
+ * One prompt for the Training page, so every model column gets identical input, plus the fallback
+ * template draft customers would see without AI. Nothing is cached or stored.
+ */
+export async function trainingPrompt(req: PreviewRequest): Promise<{
+  prompt: { system: string; user: string };
+  fallback: string;
+  temperature: number;
+  maxTokens: number;
+}> {
+  const lang: Lang = req.language === "ja" ? "ja" : "en";
+  const variant = req.variant ?? 0;
+  const [ctx, corpus] = await Promise.all([loadContext(req.productId, req.rating, req.highlightIds, lang), recentTexts(req.productId)]);
+  const seed = `training:${req.productId}:${req.rating}:${req.highlightIds.join(",")}:${req.length}:${variant}`;
+  const prompt = buildPrompt({
+    brand: ctx.brand,
+    product: ctx.product,
+    examples: ctx.examples,
+    memory: ctx.memory,
+    inspirations: ctx.inspirations,
+    link: { language: lang, visitNotes: req.notes },
+    rating: req.rating,
+    highlights: ctx.highlights,
+    length: req.length,
+    variant,
+    plan: planToPrompt(makePlan(seed, focusPool(ctx), corpus.slice(0, 20)), ctx.lang),
+    usedOpenings: [...new Set(corpus.slice(0, 30).map(opening).filter(Boolean))].slice(0, 12),
+  });
+  const extra = ctx.settings?.systemPromptExtra?.trim();
+  if (extra) prompt.system += `\n\nAdditional instructions:\n${extra}`;
+  const fallback = humanize(demoGenerate({ productName: ctx.product.name, rating: req.rating, highlights: ctx.highlights, length: req.length, seed, lang }));
+  return { prompt, fallback, temperature: ctx.settings?.temperature ?? 0.7, maxTokens: ctx.settings?.maxTokens ?? 400 };
 }
 
 /** Playground preview for /admin/training. Never cached and never tied to a link, but still kept distinct from recent drafts. */

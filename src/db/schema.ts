@@ -209,6 +209,17 @@ export const visits = sqliteTable("visits", {
   copiedAt: integer("copied_at"),
 }, (t) => [index("visits_brand_recent").on(t.brandId, t.createdAt), index("visits_link").on(t.linkId)]);
 
+/** Writing the business likes (from anywhere). Drafts borrow its tone and structure, never its wording or facts. */
+export const inspirations = sqliteTable("inspirations", {
+  id: text("id").primaryKey(),
+  brandId: text("brand_id").notNull(),
+  productId: text("product_id"), // null = brand-wide
+  text: text("text").notNull(),
+  note: text("note").notNull().default(""), // what they like about it
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  createdAt: integer("created_at").notNull(),
+}, (t) => [index("inspirations_brand").on(t.brandId)]);
+
 /** Fixed-window counters for rate limiting (login, draft generation, claims). */
 export const rateLimits = sqliteTable("rate_limits", {
   key: text("key").primaryKey(),
@@ -230,3 +241,4 @@ export type AiProviderRow = typeof aiProviders.$inferSelect;
 export type Memory = typeof memories.$inferSelect;
 export type Submission = typeof submissions.$inferSelect;
 export type Visit = typeof visits.$inferSelect;
+export type Inspiration = typeof inspirations.$inferSelect;

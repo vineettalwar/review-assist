@@ -20,7 +20,7 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
     keyHelp: "Starts with sk-or-",
     keyUrl: "https://openrouter.ai/settings/keys",
     defaultModel: "openai/gpt-4o-mini",
-    models: ["openai/gpt-4o-mini", "anthropic/claude-haiku-4.5", "google/gemini-2.5-flash", "meta-llama/llama-3.3-70b-instruct"],
+    models: ["openai/gpt-4o-mini", "google/gemini-2.5-flash", "anthropic/claude-haiku-4.5", "meta-llama/llama-3.3-70b-instruct"],
   },
   anthropic: {
     id: "anthropic",
@@ -55,7 +55,39 @@ export interface CallConfig {
   appUrl?: string;
 }
 
-export type CallResult = { ok: true; text: string } | { ok: false; error: string };
+export interface Usage {
+  input: number;
+  output: number;
+  /** USD. "provider" = billed amount reported by the provider, "estimate" = from PRICES, null = unknown model. */
+  costUsd: number | null;
+  costSource: "provider" | "estimate" | null;
+}
+
+export type CallResult = { ok: true; text: string; usage?: Usage } | { ok: false; error: string };
+
+/** USD per million tokens [input, output] for direct keys; OpenRouter reports its own billed cost. */
+const PRICES: Record<string, [number, number]> = {
+  "claude-haiku-5-5": [0.1, 0.5],
+  "claude-sonnet-5-5": [2, 10],
+  "claude-opus-5-5": [4, 20],
+  "claude-haiku-4-5": [1, 5],
+  "gpt-4.1-mini": [0.4, 1.6],
+  "gpt-4o-mini": [0.15, 0.6],
+  "gpt-5-mini": [0.25, 2],
+  "gpt-5": [1.25, 10],
+};
+
+function usageFrom(id: ProviderId, model: string, json: unknown): Usage | undefined {
+  const u = (json as { usage?: Record<string, unknown> } | null)?.usage;
+  if (!u) return undefined;
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+  const input = num(id === "anthropic" ? u.input_tokens : u.prompt_tokens);
+  const output = num(id === "anthropic" ? u.output_tokens : u.completion_tokens);
+  if (id === "openrouter" && typeof u.cost === "number") return { input, output, costUsd: u.cost, costSource: "provider" };
+  const price = PRICES[model];
+  if (!price) return { input, output, costUsd: null, costSource: null };
+  return { input, output, costUsd: (input * price[0] + output * price[1]) / 1_000_000, costSource: "estimate" };
+}
 
 type Body = Record<string, unknown>;
 
@@ -119,11 +151,11 @@ export function cleanOutput(s: string) {
   return t;
 }
 
-function finish(r: Awaited<ReturnType<typeof post>>, pick: (json: unknown) => string): CallResult {
+function finish(r: Awaited<ReturnType<typeof post>>, pick: (json: unknown) => string, id: ProviderId, model: string): CallResult {
   if ("error" in r) return { ok: false, error: r.error };
   if (r.status < 200 || r.status >= 300) return { ok: false, error: describe(r.status, errMessage(r.json)) };
   const text = cleanOutput(pick(r.json));
-  return text ? { ok: true, text } : { ok: false, error: "The model returned an empty reply." };
+  return text ? { ok: true, text, usage: usageFrom(id, model, r.json) } : { ok: false, error: "The model returned an empty reply." };
 }
 
 export async function callProvider(id: ProviderId, key: string, prompt: { system: string; user: string }, cfg: CallConfig): Promise<CallResult> {
@@ -141,8 +173,11 @@ export async function callProvider(id: ProviderId, key: string, prompt: { system
       ["temperature"],
       timeout,
     );
-    return finish(r, (j) =>
-      ((j as { content?: { type: string; text?: string }[] }).content ?? []).filter((c) => c.type === "text").map((c) => c.text ?? "").join(""),
+    return finish(
+      r,
+      (j) => ((j as { content?: { type: string; text?: string }[] }).content ?? []).filter((c) => c.type === "text").map((c) => c.text ?? "").join(""),
+      id,
+      cfg.model,
     );
   }
 
@@ -155,15 +190,16 @@ export async function callProvider(id: ProviderId, key: string, prompt: { system
       ? { model: cfg.model, messages, max_completion_tokens: cfg.maxTokens + 2000, reasoning_effort: cfg.model.startsWith("gpt-5") ? "minimal" : "low" }
       : { model: cfg.model, messages, max_completion_tokens: cfg.maxTokens, temperature: cfg.temperature };
     const r = await postWithRetry("https://api.openai.com/v1/chat/completions", { Authorization: `Bearer ${key}` }, body, ["temperature", "reasoning_effort"], timeout);
-    return finish(r, pickChat);
+    return finish(r, pickChat, id, cfg.model);
   }
 
   const r = await postWithRetry(
     "https://openrouter.ai/api/v1/chat/completions",
     { Authorization: `Bearer ${key}`, ...(cfg.appUrl ? { "HTTP-Referer": cfg.appUrl } : {}), "X-Title": "Review Assist" },
-    { model: cfg.model, temperature: cfg.temperature, max_tokens: cfg.maxTokens, messages },
+    // usage.include makes OpenRouter report the billed cost alongside the token counts.
+    { model: cfg.model, temperature: cfg.temperature, max_tokens: cfg.maxTokens, messages, usage: { include: true } },
     ["temperature"],
     timeout,
   );
-  return finish(r, pickChat);
+  return finish(r, pickChat, id, cfg.model);
 }

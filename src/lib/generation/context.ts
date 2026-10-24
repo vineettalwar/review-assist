@@ -1,5 +1,5 @@
 import { and, eq, inArray, isNull, or } from "drizzle-orm";
-import { getDb, brand, settings, products, highlights, examples, memories } from "@/db";
+import { getDb, brand, settings, products, highlights, examples, memories, inspirations } from "@/db";
 import type { Lang } from "@/lib/i18n/languages";
 import type { GenContext } from "./types";
 
@@ -15,7 +15,7 @@ export async function loadContext(productId: string, rating: number, highlightId
   ]);
   if (!product) throw new Error("Product not found");
 
-  const [[b], all, mem] = await Promise.all([
+  const [[b], all, mem, insp] = await Promise.all([
     db.select().from(brand).where(eq(brand.id, product.brandId)).limit(1),
     db
       .select()
@@ -29,6 +29,16 @@ export async function loadContext(productId: string, rating: number, highlightId
           eq(memories.brandId, product.brandId),
           eq(memories.status, "active"),
           or(eq(memories.productId, productId), isNull(memories.productId)),
+        ),
+      ),
+    db
+      .select({ text: inspirations.text, note: inspirations.note, productId: inspirations.productId, createdAt: inspirations.createdAt })
+      .from(inspirations)
+      .where(
+        and(
+          eq(inspirations.brandId, product.brandId),
+          eq(inspirations.active, true),
+          or(eq(inspirations.productId, productId), isNull(inspirations.productId)),
         ),
       ),
   ]);
@@ -51,8 +61,12 @@ export async function loadContext(productId: string, rating: number, highlightId
   // Product memory first, capped to keep prompts tight.
   mem.sort((x, y) => (x.productId ? 0 : 1) - (y.productId ? 0 : 1));
 
+  // Up to 3 inspirations, product-level and newest first, trimmed so they can't crowd out the facts.
+  insp.sort((x, y) => (x.productId ? 0 : 1) - (y.productId ? 0 : 1) || y.createdAt - x.createdAt);
+
   return {
     memory: mem.slice(0, 24).map((m) => ({ kind: m.kind, text: m.text, scope: m.productId ? ("product" as const) : ("brand" as const) })),
+    inspirations: insp.slice(0, 3).map((i) => ({ text: i.text.length > 600 ? `${i.text.slice(0, 600).trimEnd()}…` : i.text, note: i.note })),
     brand: b,
     settings: s,
     product,

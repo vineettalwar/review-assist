@@ -20,10 +20,17 @@ export interface PromptMemory {
   scope: "brand" | "product";
 }
 
+export interface PromptInspiration {
+  text: string;
+  note: string;
+}
+
 export type PromptProduct = Pick<Product, "name" | "category" | "knowledge" | "avoid" | "audience" | "experience" | "praise" | "concerns">;
 
 export interface PromptInput {
   memory?: PromptMemory[];
+  /** Writing the business likes; tone and structure only. */
+  inspirations?: PromptInspiration[];
   brand: Brand | undefined;
   product: PromptProduct;
   examples: Pick<Example, "rating" | "text">[];
@@ -42,6 +49,7 @@ export interface PromptInput {
 
 export interface GenContext {
   memory: PromptMemory[];
+  inspirations: PromptInspiration[];
   brand: Brand | undefined;
   settings: Settings | undefined;
   product: Product;
