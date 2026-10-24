@@ -7,7 +7,7 @@ import { requireAdmin } from "@/lib/auth";
 import { setActiveBrandCookie } from "@/lib/brand";
 import { normalizePortal } from "@/lib/compliance";
 import { toGoogleReviewUrl } from "@/lib/portals/google";
-import { prefillFromUrls, type PrefillResult } from "@/lib/prefill";
+import { importSite, type ImportResult } from "@/lib/prefill/discover";
 import { addMemories } from "@/lib/memory";
 import { previewDraft } from "@/lib/generation";
 import type { MemKind, Polarity, PortalType, SavePayload, SavedProduct, Voice } from "./types";
@@ -33,22 +33,18 @@ function isHttps(u: string) {
   }
 }
 
-export async function prefillAction(args: {
-  brandName: string;
-  brandUrl: string;
-  productUrls: string[];
-}): Promise<{ ok: true; result: PrefillResult } | Err> {
+/** One-click import: find the site's service and about pages, read up to `pages` of them, and draft the whole setup. Nothing is saved. */
+export async function importAction(args: { website: string; pages: number; extraUrls: string[] }): Promise<{ ok: true; result: ImportResult } | Err> {
   await requireAdmin();
-  const brandUrl = str(args?.brandUrl, 500);
-  const productUrls = (Array.isArray(args?.productUrls) ? args.productUrls : []).map((u) => str(u, 500)).filter(Boolean).slice(0, 3);
-  if (brandUrl && !isHttps(brandUrl)) return { ok: false, error: "The website must be a full https:// address." };
-  if (productUrls.some((u) => !isHttps(u))) return { ok: false, error: "Product pages must be full https:// addresses." };
-  if (!brandUrl && !productUrls.length) return { ok: false, error: "Add a website or a product page first, or fill in by hand." };
+  const website = str(args?.website, 500);
+  if (!isHttps(website)) return { ok: false, error: "Enter the website as a full https:// address." };
+  const extra = (Array.isArray(args?.extraUrls) ? args.extraUrls : []).map((u) => str(u, 500)).filter(Boolean).slice(0, 10);
+  if (extra.some((u) => !isHttps(u))) return { ok: false, error: "Specific pages must be full https:// addresses." };
+  const pages = Math.max(2, Math.min(30, Math.round(Number(args?.pages) || 8)));
   try {
-    const result = await prefillFromUrls({ brandUrl: brandUrl || undefined, productUrls, brandName: str(args.brandName, 120) || undefined });
-    return { ok: true, result };
+    return { ok: true, result: await importSite(website, { pages, extraUrls: extra }) };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Couldn't read the site. You can fill in by hand." };
+    return { ok: false, error: e instanceof Error && e.message ? e.message : "Couldn't read the site. You can fill in by hand." };
   }
 }
 
@@ -160,6 +156,8 @@ export async function createBrandFromOnboarding(
       id,
       name,
       about: str(b.about, 2_000),
+      audience: str(b.audience, 2_000),
+      facts: str(b.facts, 4_000),
       voice: VOICES.includes(b.voice) ? b.voice : "warm",
       voiceNotes: str(b.voiceNotes, 2_000),
       wordsToAvoid: str(b.wordsToAvoid, 2_000),

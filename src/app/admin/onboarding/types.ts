@@ -25,6 +25,8 @@ export interface DraftBrand {
   name: string;
   website: string;
   about: string;
+  audience: string;
+  facts: string;
   voice: Voice;
   voiceNotes: string;
   wordsToAvoid: string;

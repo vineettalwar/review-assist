@@ -4,8 +4,9 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2, Lock, Check, X } from "lucide-react";
 import { Button, Chip, Field, Input, Note, Pill, Segmented, Select, Textarea, cn } from "@/components/ui";
-import { createBrandFromOnboarding, prefillAction, sampleAction, saveExampleAction } from "./actions";
+import { createBrandFromOnboarding, importAction, sampleAction, saveExampleAction } from "./actions";
 import type { PrefillResult } from "@/lib/prefill";
+import type { SuggestedPortal } from "@/lib/prefill/discover";
 import type { DraftBrand, DraftHighlight, DraftMemory, DraftPortal, DraftProduct, MemKind, PortalType, Polarity, SavedProduct, Voice } from "./types";
 
 const STEPS = ["Brand", "Products", "Portals", "Test"] as const; // indicator labels; step 0 (start) and 1 (brand) share "Brand"
@@ -47,14 +48,17 @@ const OFFLINE = "Couldn't reach the server. Reload the page and try again. What 
 export function Wizard() {
   const router = useRouter();
   const [step, setStep] = useState(0); // 0 start, 1 brand, 2 products, 3 portals, 4 test
-  const [brand, setBrand] = useState<DraftBrand>({ name: "", website: "", about: "", voice: "warm", voiceNotes: "", wordsToAvoid: "", defaultLanguage: "en" });
+  const [brand, setBrand] = useState<DraftBrand>({ name: "", website: "", about: "", audience: "", facts: "", voice: "warm", voiceNotes: "", wordsToAvoid: "", defaultLanguage: "en" });
   const [productUrls, setProductUrls] = useState<string[]>([]);
+  // Kept as typed text so the field can be cleared mid-edit; clamped to 2–30 when used and on blur.
+  const [pagesText, setPagesText] = useState("8");
+  const pages = Math.max(2, Math.min(30, Math.round(Number(pagesText) || 8)));
   const [products, setProducts] = useState<DraftProduct[]>([blankProduct()]);
   const [brandMems, setBrandMems] = useState<DraftMemory[]>([]);
   const [portals, setPortals] = useState<DraftPortal[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [banner, setBanner] = useState<string>("");
-  const [prefill, setPrefill] = useState<{ mode: "ai" | "basic"; warnings: string[]; sources: number } | null>(null);
+  const [prefill, setPrefill] = useState<{ mode: "ai" | "basic"; warnings: string[]; sources: string[] } | null>(null);
   const [busy, setBusy] = useState<"" | "prefill" | "save">("");
   const [saved, setSaved] = useState<{ brandId: string; products: SavedProduct[]; warning?: string } | null>(null);
 
@@ -62,10 +66,9 @@ export function Wizard() {
   const stepIdx = step === 0 ? 0 : step - 1 > 3 ? 3 : step - 1; // indicator index
   const patchBrand = (p: Partial<DraftBrand>) => setBrand((b) => ({ ...b, ...p }));
 
-  async function runPrefill() {
+  async function runImport() {
     const e: Record<string, string> = {};
-    if (!brand.name.trim()) e.name = "Add the brand name first.";
-    if (brand.website.trim() && !isHttps(brand.website.trim())) e.website = "Use a full https:// address.";
+    if (!isHttps(brand.website.trim())) e.website = "Enter the website as a full https:// address.";
     productUrls.forEach((u, i) => {
       if (u.trim() && !isHttps(u.trim())) e[`pu${i}`] = "Use a full https:// address.";
     });
@@ -73,18 +76,19 @@ export function Wizard() {
     if (Object.keys(e).length) return;
     setBusy("prefill");
     setBanner("");
-    const r = await prefillAction({ brandName: brand.name, brandUrl: brand.website, productUrls }).catch(() => null);
+    const r = await importAction({ website: brand.website.trim(), pages, extraUrls: productUrls.filter((u) => u.trim()) }).catch(() => null);
     setBusy("");
     if (!r || !r.ok) {
       setBanner(r?.error || OFFLINE);
       return;
     }
-    applyPrefill(r.result);
+    applyPrefill(r.result, r.result.portals);
     setStep(1);
   }
 
-  function applyPrefill(res: PrefillResult) {
-    setBrand((b) => ({ ...b, ...res.brand, name: res.brand.name?.trim() || b.name }));
+  function applyPrefill(res: PrefillResult, found: SuggestedPortal[] = []) {
+    setBrand((b) => ({ ...b, ...res.brand, name: b.name.trim() || res.brand.name?.trim() || "" }));
+    if (found.length) setPortals(found.map((p) => ({ key: k(), type: p.type, label: p.label, url: p.url })));
     const toMem = (m: { kind: MemKind; text: string }): DraftMemory => ({ key: k(), kind: m.kind, text: m.text, checked: true });
     const ps: DraftProduct[] = res.products.map((p, i) => ({
       key: k(),
@@ -102,7 +106,7 @@ export function Wizard() {
     }));
     setProducts(ps.length ? ps : [blankProduct()]);
     setBrandMems(res.memories.filter((m) => m.productIndex === null || m.productIndex >= ps.length || m.productIndex < 0).map(toMem));
-    setPrefill({ mode: res.mode, warnings: res.warnings, sources: res.sources.length });
+    setPrefill({ mode: res.mode, warnings: res.warnings, sources: res.sources });
   }
 
   function validate(s: number): boolean {
@@ -119,7 +123,8 @@ export function Wizard() {
     }
     if (s === 3) {
       portals.forEach((p) => {
-        if (!isHttps(p.url.trim())) e[`pt${p.key}`] = "A full https:// link is required.";
+        const placeId = p.type === "google" && /^[A-Za-z0-9_-]{20,300}$/.test(p.url.trim());
+        if (!placeId && !isHttps(p.url.trim())) e[`pt${p.key}`] = p.type === "google" ? "Enter a Place ID or a Google review link." : "A full https:// link is required.";
         if (p.type === "custom" && !p.label.trim()) e[`pl${p.key}`] = "Give it a name.";
       });
     }
@@ -196,14 +201,25 @@ export function Wizard() {
 
       {step === 0 && (
         <div className="space-y-5">
-          <Field label="Brand name" htmlFor="ob-name" error={errors.name}>
-            <Input id="ob-name" value={brand.name} onChange={(e) => patchBrand({ name: e.target.value })} aria-invalid={!!errors.name} placeholder="Your brand name" />
+          <Field label="Website" htmlFor="ob-web" error={errors.website} hint="We find the service and about pages ourselves and draft everything. You review it all before anything is saved.">
+            <Input id="ob-web" type="url" inputMode="url" value={brand.website} onChange={(e) => patchBrand({ website: e.target.value })} aria-invalid={!!errors.website} placeholder="https://client-website.com" />
           </Field>
-          <Field label="Website (optional)" htmlFor="ob-web" error={errors.website} hint="We read this page to draft your brand and products.">
-            <Input id="ob-web" type="url" inputMode="url" value={brand.website} onChange={(e) => patchBrand({ website: e.target.value })} aria-invalid={!!errors.website} placeholder="https://yourbrand.com" />
-          </Field>
-          <fieldset>
-            <legend className="mb-1.5 text-[13px] font-medium text-ink-2">Product pages (optional, up to 3)</legend>
+          <div className="grid gap-5 min-[560px]:grid-cols-[minmax(0,1fr)_180px]">
+            <Field label="Brand name (optional)" htmlFor="ob-name" error={errors.name} hint="Taken from the site if left empty.">
+              <Input id="ob-name" value={brand.name} onChange={(e) => patchBrand({ name: e.target.value })} aria-invalid={!!errors.name} placeholder="Client name" />
+            </Field>
+            <Field label="Pages to read" htmlFor="ob-pages" hint="2 to 30. About 1 cent per 4 pages.">
+              <Input
+                id="ob-pages" type="number" inputMode="numeric" min={2} max={30} value={pagesText}
+                onChange={(e) => setPagesText(e.target.value)}
+                onBlur={() => setPagesText(String(pages))}
+              />
+            </Field>
+          </div>
+          <details className="group" open={productUrls.length > 0}>
+            <summary className="cursor-pointer text-[13px] font-medium text-carbon">Add specific pages (optional)</summary>
+          <fieldset className="mt-3">
+            <legend className="mb-1.5 text-[13px] font-medium text-ink-2">Service or product pages to read first (up to 10)</legend>
             <div className="space-y-2">
               {productUrls.map((u, i) => (
                 <div key={i}>
@@ -225,15 +241,16 @@ export function Wizard() {
                 </div>
               ))}
             </div>
-            {productUrls.length < 3 && (
+            {productUrls.length < 10 && (
               <Button variant="line" size="sm" className="mt-2" onClick={() => setProductUrls((a) => [...a, ""])}>
-                <Plus size={14} aria-hidden /> Add a product page
+                <Plus size={14} aria-hidden /> Add a page
               </Button>
             )}
           </fieldset>
+          </details>
           <div className="flex flex-wrap items-center gap-3 pt-2">
-            <Button onClick={runPrefill} disabled={busy === "prefill"}>
-              {busy === "prefill" ? "Reading the site…" : "Prefill from website"}
+            <Button onClick={runImport} disabled={busy === "prefill"}>
+              {busy === "prefill" ? "Reading the site…" : "Import from website"}
             </Button>
             <Button
               variant="line"
@@ -245,7 +262,7 @@ export function Wizard() {
               Fill in by hand
             </Button>
             <span role="status" aria-live="polite" className="text-sm text-ink-3">
-              {busy === "prefill" && "This takes a few seconds. Nothing is saved yet."}
+              {busy === "prefill" && `Reading up to ${pages} pages. This can take up to a minute. Nothing is saved yet.`}
             </span>
           </div>
         </div>
@@ -259,6 +276,12 @@ export function Wizard() {
           </Field>
           <Field label="About" htmlFor="b-about" hint="Two or three sentences about the business.">
             <Textarea id="b-about" value={brand.about} onChange={(e) => patchBrand({ about: e.target.value })} />
+          </Field>
+          <Field label="Who are the customers?" htmlFor="b-aud" hint="e.g. Marketing teams at B2B companies with a WordPress site.">
+            <Textarea id="b-aud" rows={2} value={brand.audience} onChange={(e) => patchBrand({ audience: e.target.value })} />
+          </Field>
+          <Field label="Brand facts" htmlFor="b-facts" hint="Short facts drafts may use, one per line: years in business, locations, response times.">
+            <Textarea id="b-facts" rows={3} value={brand.facts} onChange={(e) => patchBrand({ facts: e.target.value })} />
           </Field>
           <div>
             <div className="mb-1.5 text-[13px] font-medium text-ink-2" id="voice-l">Voice</div>
@@ -325,8 +348,8 @@ export function Wizard() {
                   <Field label="Name shown to customers" htmlFor={`pl-${p.key}`} error={errors[`pl${p.key}`]}>
                     <Input id={`pl-${p.key}`} value={p.label} aria-invalid={!!errors[`pl${p.key}`]} onChange={(e) => setPortals((a) => a.map((x) => (x.key === p.key ? { ...x, label: e.target.value } : x)))} />
                   </Field>
-                  <Field label="Review page link" htmlFor={`pu-${p.key}`} error={errors[`pt${p.key}`]}>
-                    <Input id={`pu-${p.key}`} type="url" inputMode="url" value={p.url} placeholder={meta.ph} aria-invalid={!!errors[`pt${p.key}`]} onChange={(e) => setPortals((a) => a.map((x) => (x.key === p.key ? { ...x, url: e.target.value } : x)))} />
+                  <Field label={p.type === "google" ? "Place ID or review link" : "Review page link"} htmlFor={`pu-${p.key}`} error={errors[`pt${p.key}`]}>
+                    <Input id={`pu-${p.key}`} type={p.type === "google" ? "text" : "url"} inputMode="url" value={p.url} placeholder={p.type === "google" ? "ChIJ… or https://g.page/r/…/review" : meta.ph} aria-invalid={!!errors[`pt${p.key}`]} onChange={(e) => setPortals((a) => a.map((x) => (x.key === p.key ? { ...x, url: e.target.value } : x)))} />
                   </Field>
                 </div>
               </div>
@@ -362,17 +385,26 @@ export function Wizard() {
   );
 }
 
-function PrefillNote({ p }: { p: { mode: "ai" | "basic"; warnings: string[]; sources: number } }) {
+function PrefillNote({ p }: { p: { mode: "ai" | "basic"; warnings: string[]; sources: string[] } }) {
+  const n = p.sources.length;
   return (
     <div className="rounded border border-carbon bg-wash px-4 py-3 text-[13px] text-ink-2">
       <div className="flex flex-wrap items-center gap-2">
         <Pill tone={p.mode === "ai" ? "blue" : "neutral"}>{p.mode === "ai" ? "AI" : "Basic"}</Pill>
         <span>
           {p.mode === "ai"
-            ? `Drafted from ${p.sources} page${p.sources === 1 ? "" : "s"}. Check every field: it's your brand.`
+            ? `Drafted from ${n} page${n === 1 ? "" : "s"}. Check every field: it's the client's brand.`
             : "Basic prefill from page descriptions and a few factual lines (no AI provider connected, or the model failed). Fill in the gaps by hand."}
         </span>
       </div>
+      {n > 0 && (
+        <details className="mt-2">
+          <summary className="cursor-pointer text-carbon">Pages read</summary>
+          <ul className="mt-1 list-disc pl-5">
+            {p.sources.map((s) => <li key={s} className="break-all">{s.replace(/^https:\/\//, "")}</li>)}
+          </ul>
+        </details>
+      )}
       {p.warnings.length > 0 && (
         <ul className="mt-2 list-disc pl-5 text-warn">
           {p.warnings.map((w, i) => (

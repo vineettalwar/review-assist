@@ -57,7 +57,7 @@ function normHighlights(v: unknown): PrefillProduct["highlights"] {
 
 export function normalizeModelResult(
   raw: string,
-  ctx: { sources: string[]; productUrls: string[]; fallbackName: string; brandUrl?: string },
+  ctx: { sources: string[]; productUrls: string[]; fallbackName: string; brandUrl?: string; maxProducts?: number },
 ): Omit<PrefillResult, "warnings" | "mode"> | null {
   const o = parseJsonObject(raw);
   if (!o) return null;
@@ -66,6 +66,8 @@ export function normalizeModelResult(
   const brand: PrefillBrand = {
     name: str(b.name, 120) || ctx.fallbackName,
     about: str(b.about, 600),
+    audience: str(b.audience, 400),
+    facts: str(b.facts, 1000),
     voice,
     voiceNotes: str(b.voiceNotes, 400),
     wordsToAvoid: str(b.wordsToAvoid, 200),
@@ -73,7 +75,7 @@ export function normalizeModelResult(
   };
   const products: PrefillProduct[] = [];
   if (Array.isArray(o.products)) {
-    for (const p of o.products.slice(0, 3)) {
+    for (const p of o.products.slice(0, ctx.maxProducts ?? 3)) {
       if (!p || typeof p !== "object") continue;
       const r = p as Record<string, unknown>;
       const name = str(r.name, 120);
@@ -137,6 +139,8 @@ export function basicResult(
   const brand: PrefillBrand = {
     name: JUNK.test(name) ? opts.brandName?.trim() || "" : name,
     about: (brandPage?.description || brandPage?.ogDescription || "").slice(0, 600),
+    audience: "",
+    facts: "",
     voice: "warm",
     voiceNotes: "",
     wordsToAvoid: "",
