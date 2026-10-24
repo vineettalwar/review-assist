@@ -6,7 +6,7 @@ import { getLinkByToken, loadReviewData, markOpened, recordVisit } from "../reso
 import { canIncentivize } from "@/lib/compliance";
 import { generateDraft, preselectHighlights } from "@/lib/generation";
 import { issueVisit } from "@/lib/visit";
-import { parseLanguages, pickLang } from "@/lib/i18n/languages";
+import { chipLabel, marketLang, parseLanguages, pickLang } from "@/lib/i18n/languages";
 import { getDb, brand, settings } from "@/db";
 import { eq } from "drizzle-orm";
 
@@ -51,13 +51,17 @@ export default async function ReviewPage({
     return <Inactive brand={await brandNameForToken(token)} lang={pickLang(enabled, { query: sp.lang, acceptLanguage })} />;
   }
   const { link, highlights, portals, reward } = data;
-  // Product links have no fixed language: ?lang=, then the browser. Customer links keep the language they were made with.
-  const lang = pickLang(enabled, {
-    query: sp.lang,
-    preferred: link.kind === "customer" ? link.language : null,
-    acceptLanguage: link.kind === "product" ? acceptLanguage : null,
-    fallback: data.brand?.defaultLanguage,
-  });
+  const strict = !!data.brand?.strict;
+  // A product with a market is always reviewed in that market's language. Otherwise product links follow ?lang=,
+  // then the browser; customer links keep the language they were made with.
+  const lang =
+    (link.kind === "product" ? marketLang(data.product?.market) : null) ??
+    pickLang(enabled, {
+      query: sp.lang,
+      preferred: link.kind === "customer" ? link.language : null,
+      acceptLanguage: link.kind === "product" ? acceptLanguage : null,
+      fallback: data.brand?.defaultLanguage,
+    });
 
   const visit = await issueVisit(link.id, lang);
   await Promise.all([
@@ -67,7 +71,8 @@ export default async function ReviewPage({
 
   const preselected = preselectHighlights(link.visitNotes, highlights).sort();
   // Not awaited: the page renders at once and the first draft streams in when the model finishes.
-  const initialDraft = generateDraft({ token, visit: visit.token, ip: h.get("cf-connecting-ip") ?? "local", rating: 0, highlightIds: preselected, length: "short", variant: 0 })
+  // Genuine-experience mode writes nothing until the customer has rated.
+  const initialDraft = strict ? Promise.resolve("") : generateDraft({ token, visit: visit.token, ip: h.get("cf-connecting-ip") ?? "local", rating: 0, highlightIds: preselected, length: "short", variant: 0 })
     .then((r) => r.text)
     .catch(() => "");
 
@@ -78,9 +83,10 @@ export default async function ReviewPage({
       lang={lang}
       brandName={data.brand?.name ?? ""}
       customerName={link.kind === "customer" ? link.customerName : ""}
-      highlights={highlights.map((x) => ({ id: x.id, label: lang === "ja" && x.labelJa ? x.labelJa : x.label, polarity: x.polarity }))}
-      portals={portals.map((p) => ({ id: p.id, type: p.type, label: p.label, url: p.url, incentive: canIncentivize(p) }))}
-      reward={reward && reward.enabled ? { title: reward.title, description: reward.description } : null}
+      strict={strict}
+      highlights={highlights.map((x) => ({ id: x.id, label: chipLabel(x, lang), polarity: x.polarity, kind: x.kind }))}
+      portals={portals.map((p) => ({ id: p.id, type: p.type, label: p.label, url: p.url, incentive: canIncentivize(p), minChars: p.minChars }))}
+      reward={reward && reward.enabled && !strict ? { title: reward.title, description: reward.description } : null}
       initialDraft={initialDraft}
       initialSelected={preselected}
     />

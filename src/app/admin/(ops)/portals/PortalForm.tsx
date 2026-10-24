@@ -16,7 +16,7 @@ const PRESETS: { type: string; label: string; name: string }[] = [
   { type: "custom", label: "", name: "Custom (your website, etc.)" },
 ];
 
-export type PortalInitial = { id: string; type: string; label: string; url: string; allowsIncentives: boolean };
+export type PortalInitial = { id: string; type: string; label: string; url: string; allowsIncentives: boolean; minChars: number };
 
 export function PortalForm({ initial }: { initial?: PortalInitial }) {
   const router = useRouter();
@@ -73,6 +73,9 @@ export function PortalForm({ initial }: { initial?: PortalInitial }) {
           .
         </p>
       )}
+      <Field label="Minimum review length" htmlFor="minChars" hint="Characters the site requires, e.g. 50 for Bazaarvoice. 0 = no minimum." className="mb-4 max-w-[220px]">
+        <Input id="minChars" name="minChars" type="number" min={0} max={2000} defaultValue={initial?.minChars ?? 0} />
+      </Field>
       <label className="mb-5 flex items-center gap-2.5 text-sm">
         <input
           type="checkbox" name="allowsIncentives" disabled={locked}

@@ -5,6 +5,7 @@ import { getDb, products, highlights, examples, memories, inspirations, settings
 import { requireActiveBrand } from "@/lib/brand";
 import { getAiStatus, openRouterBalance, PROVIDERS, type OpenRouterBalance } from "@/lib/ai";
 import { LANGUAGES } from "../constants";
+import { parseRules } from "@/lib/rules";
 import { TrainingLab, type LabProvider } from "./TrainingLab";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,7 @@ export default async function TrainingPage() {
   const db = await getDb();
   const since = Date.now() - 30 * DAY;
   const [ps, ai, insp, likes, rules, [st], balance, usage] = await Promise.all([
-    db.select({ id: products.id, name: products.name }).from(products).where(eq(products.brandId, active.id)).orderBy(asc(products.createdAt)),
+    db.select({ id: products.id, name: products.name, market: products.market }).from(products).where(eq(products.brandId, active.id)).orderBy(asc(products.market), asc(products.createdAt)),
     getAiStatus(),
     db.select().from(inspirations).where(eq(inspirations.brandId, active.id)).orderBy(desc(inspirations.createdAt)),
     db.select().from(examples).where(eq(examples.brandId, active.id)).orderBy(desc(examples.createdAt)).limit(8),
@@ -43,6 +44,7 @@ export default async function TrainingPage() {
     ? await db.select().from(highlights).where(inArray(highlights.productId, ps.map((p) => p.id))).orderBy(asc(highlights.sort))
     : [];
   const name = new Map(ps.map((p) => [p.id, p.name]));
+  const clientRules = parseRules(active.rules);
 
   const providers: LabProvider[] = ai.providers.map((p) => ({
     id: p.id,
@@ -62,11 +64,12 @@ export default async function TrainingPage() {
         description="Try the same request on two models next to the no-AI fallback. What you like, dislike and find inspiring is saved and shapes every customer draft."
       />
       <BalanceBar balance={balance} activeProvider={ai.active?.id ?? null} avgLive={avgLive} />
+      <RulesBar count={clientRules.draft.length} strict={active.strict} />
       <TrainingLab
         currentExtra={st?.extra ?? ""}
         products={ps.map((p) => ({
           id: p.id,
-          name: p.name,
+          name: p.market ? `${p.name} (${p.market})` : p.name,
           highlights: hs.filter((h) => h.productId === p.id).map((h) => ({ id: h.id, label: h.label, polarity: h.polarity })),
         }))}
         languages={LANGUAGES}
@@ -145,6 +148,18 @@ function sum(rows: UsageRow[]) {
     estimated: priced.some((r) => r.estimate === "estimate"),
     unpriced: rows.filter((r) => r.ok && r.cost == null).length,
   };
+}
+
+/** Which client rules shape these drafts; they are part of "system" in the Request tab. */
+function RulesBar({ count, strict }: { count: number; strict: boolean }) {
+  if (!count && !strict) return null;
+  return (
+    <p className="mb-6 rounded border border-rule px-4 py-3 text-[13px] text-ink-2">
+      {strict ? "Genuine-experience mode is on. " : ""}
+      {count ? `${count} client rule${count === 1 ? "" : "s"} are added to the system prompt. ` : ""}
+      <Link href="/admin/rules" className="underline underline-offset-2">Edit rules</Link>
+    </p>
+  );
 }
 
 function BalanceBar({ balance, activeProvider, avgLive }: { balance: OpenRouterBalance; activeProvider: string | null; avgLive: number | null }) {

@@ -11,7 +11,7 @@ import { cacheKey, countVisitDrafts, findCached, findNearest, MAX_GENERATIONS_PE
 import { checkUnique, makePlan, opening, planToPrompt, tooSimilar, type Uniqueness } from "./unique";
 import { readVisit } from "@/lib/visit";
 import { rateLimit } from "@/lib/ratelimit";
-import type { Lang } from "@/lib/i18n/languages";
+import { isLang, type Lang } from "@/lib/i18n/languages";
 import type { GenContext } from "./types";
 
 export { buildPrompt } from "./prompt";
@@ -26,6 +26,8 @@ export interface DraftRequest {
   highlightIds: string[];
   length: DraftLength;
   variant: number; // "New draft" increments this
+  /** "In your own words" from the review page; part of the cache key. */
+  words?: string;
   ip?: string;
 }
 
@@ -46,6 +48,12 @@ export interface PreviewRequest {
 }
 
 export class LinkInactiveError extends Error {}
+
+/** Short stable hash of the customer's own words, so the same words reuse the same cached draft. */
+async function wordsHash(words: string) {
+  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(words));
+  return [...new Uint8Array(d).slice(0, 8)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 export class VisitError extends Error {}
 
 const AI_ATTEMPTS = 3;
@@ -57,7 +65,7 @@ const DEMO_CANDIDATES = 10;
  */
 async function produce(
   ctx: GenContext,
-  link: { language: string; visitNotes: string; customerName?: string },
+  link: { language: string; visitNotes: string; customerName?: string; customerWords?: string },
   rating: number,
   length: DraftLength,
   variant: number,
@@ -119,7 +127,9 @@ export async function generateDraft(req: DraftRequest): Promise<DraftResult> {
   const visit = await readVisit(link.id, req.visit);
   if (!visit) throw new VisitError("Visit expired");
   const { visitId, lang } = visit;
-  const key = { linkId: link.id, visitId, rating: req.rating, keys: cacheKey(req.highlightIds), length: req.length, variant: req.variant };
+  const words = (req.words ?? "").trim();
+  const keys = cacheKey(req.highlightIds) + (words ? `|w:${await wordsHash(words)}` : "");
+  const key = { linkId: link.id, visitId, rating: req.rating, keys, length: req.length, variant: req.variant };
   const [hit, n] = await Promise.all([findCached(key), countVisitDrafts(link.id, visitId)]);
   if (hit) return { text: humanize(hit.text), model: hit.model, cached: true };
 
@@ -139,7 +149,7 @@ export async function generateDraft(req: DraftRequest): Promise<DraftResult> {
     return { text, model: "demo", cached: false };
   }
 
-  const out = await produce(ctx, { ...link, language: lang }, req.rating, req.length, req.variant, seed, corpus, "live");
+  const out = await produce(ctx, { ...link, language: lang, customerWords: words }, req.rating, req.length, req.variant, seed, corpus, "live");
   await storeDraft({ ...key, productId: link.productId, text: out.text, model: out.model });
   return { text: out.text, model: out.model, cached: false };
 }
@@ -162,7 +172,7 @@ export async function trainingPrompt(req: PreviewRequest): Promise<{
   temperature: number;
   maxTokens: number;
 }> {
-  const lang: Lang = req.language === "ja" ? "ja" : "en";
+  const lang: Lang = isLang(req.language) ? req.language : "en";
   const variant = req.variant ?? 0;
   const [ctx, corpus] = await Promise.all([loadContext(req.productId, req.rating, req.highlightIds, lang), recentTexts(req.productId)]);
   const seed = `training:${req.productId}:${req.rating}:${req.highlightIds.join(",")}:${req.length}:${variant}`;
@@ -187,7 +197,7 @@ export async function trainingPrompt(req: PreviewRequest): Promise<{
 
 /** Playground preview for /admin/training. Never cached and never tied to a link, but still kept distinct from recent drafts. */
 export async function previewDraft(req: PreviewRequest): Promise<DraftResult> {
-  const lang: Lang = req.language === "ja" ? "ja" : "en";
+  const lang: Lang = isLang(req.language) ? req.language : "en";
   const [ctx, corpus] = await Promise.all([loadContext(req.productId, req.rating, req.highlightIds, lang), recentTexts(req.productId)]);
   const out = await produce(
     ctx,

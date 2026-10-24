@@ -2,11 +2,24 @@
 export const REVIEW_LANGUAGES = [
   { code: "en", label: "English", native: "English" },
   { code: "ja", label: "Japanese", native: "日本語" },
+  { code: "de", label: "German", native: "Deutsch" },
 ] as const;
 
 export type Lang = (typeof REVIEW_LANGUAGES)[number]["code"];
 
-export const isLang = (v: unknown): v is Lang => v === "en" || v === "ja";
+export const isLang = (v: unknown): v is Lang => v === "en" || v === "ja" || v === "de";
+
+/** The language a product's market is reviewed in, or null when the product has no fixed market. */
+export function marketLang(market: string | null | undefined): Lang | null {
+  return market === "US" ? "en" : market === "DE" ? "de" : market === "JP" ? "ja" : null;
+}
+
+/** A highlight chip's label in the page language, falling back to the English label. */
+export function chipLabel(h: { label: string; labelJa?: string; labelDe?: string }, lang: Lang | string): string {
+  if (lang === "ja" && h.labelJa) return h.labelJa;
+  if (lang === "de" && h.labelDe) return h.labelDe;
+  return h.label;
+}
 
 /** Parses settings.languages; always returns at least English. */
 export function parseLanguages(raw: string | null | undefined): Lang[] {

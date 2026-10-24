@@ -75,11 +75,44 @@ const JA = {
   },
 };
 
+// German: {n} = product name. Nouns keep their capitals, so labels are used as written.
+const undList = (a: string[]) => (a.length > 1 ? a.slice(0, -1).join(", ") + " und " + a[a.length - 1] : (a[0] ?? ""));
+const DE = {
+  open: {
+    neutral: ["Ein paar Gedanken zu {n}.", "Meine Erfahrung mit {n}.", "Kurz zu {n}.", "So lief es mit {n} bei mir."],
+    good: ["Mit {n} bin ich sehr zufrieden.", "{n} hat mich überzeugt.", "Gute Erfahrung mit {n}.", "Ich bin froh, dass ich mich für {n} entschieden habe.", "{n} war besser, als ich erwartet hatte."],
+    mixed: ["Mit {n} bin ich gemischt zufrieden.", "{n} war in Ordnung, mit kleinen Abstrichen.", "Bei {n} gab es Licht und Schatten.", "{n} hat im Großen und Ganzen gepasst."],
+    poor: ["Von {n} war ich leider enttäuscht.", "{n} hat meine Erwartungen nicht erfüllt.", "Mit {n} war ich diesmal nicht zufrieden.", "Ich hatte mir von {n} mehr erhofft."],
+  },
+  // Labels are short phrases with their own capitals ("Ersatzteil kam schnell"), so they follow a colon instead of sitting mid-sentence.
+  neg: [(l: string[]) => `Weniger gut: ${undList(l)}.`, (l: string[]) => `Mein Kritikpunkt: ${undList(l)}.`, (l: string[]) => `Gestört hat mich Folgendes: ${undList(l)}.`],
+  posAfterNeg: [(l: string[]) => `Dafür positiv: ${undList(l)}.`, (l: string[]) => `Fairerweise auch: ${undList(l)}.`],
+  pos: [(l: string[]) => `Besonders gut: ${undList(l)}.`, (l: string[]) => `Positiv aufgefallen: ${undList(l)}.`, (l: string[]) => `Was mir gefallen hat: ${undList(l)}.`],
+  extra: {
+    neutral: ["Es war ungefähr so, wie ich es erwartet hatte.", "Keine großen Überraschungen."],
+    good: ["Alles hat so funktioniert, wie es beschrieben war.", "Das Ganze war unkompliziert.", "Man merkt, dass Sorgfalt dahintersteckt."],
+    mixed: ["Das Grundsätzliche passt, bei den Details ist noch Luft nach oben.", "Manches war gut, anderes weniger."],
+    poor: ["Es war mehr Aufwand als nötig.", "Ich hoffe, dass hier nachgebessert wird."],
+  },
+  close: {
+    neutral: ["", "Soweit mein Eindruck."],
+    good: ["Gerne wieder.", "Kann ich empfehlen.", "Vielen Dank!"],
+    mixed: ["Mit ein paar Verbesserungen wäre es top.", "Insgesamt okay."],
+    poor: ["Ich hoffe auf Verbesserungen.", "Ich schreibe das, damit es besser wird."],
+  },
+};
+
+const SITUATION = {
+  en: (l: string[]) => `For context: ${join(l.map(lc))}.`,
+  de: (l: string[]) => `Zum Hintergrund: ${undList(l)}.`,
+  ja: (l: string[]) => `${l.join("、")}で使っています。`,
+};
+
 /** Template writer used when no AI provider is connected. The seed varies wording between visits. */
 export function demoGenerate(o: {
   productName: string;
   rating: number;
-  highlights: { label: string; polarity: string }[];
+  highlights: { label: string; polarity: string; kind?: string }[];
   length: DraftLength;
   seed: string;
   lang?: Lang;
@@ -87,12 +120,26 @@ export function demoGenerate(o: {
   const r = rng(o.seed);
   const t = tone(o.rating);
   const raw = o.productName.trim();
-  const negL = o.highlights.filter((h) => h.polarity === "neg").map((h) => h.label.trim());
-  const posL = o.highlights.filter((h) => h.polarity !== "neg").map((h) => h.label.trim());
+  const points = o.highlights.filter((h) => h.kind !== "situation");
+  const sitL = o.highlights.filter((h) => h.kind === "situation").map((h) => h.label.trim());
+  const negL = points.filter((h) => h.polarity === "neg").map((h) => h.label.trim());
+  const posL = points.filter((h) => h.polarity !== "neg").map((h) => h.label.trim());
+
+  if (o.lang === "de") {
+    const n = raw || "dem Produkt";
+    const parts = [pick(r, DE.open[t]).replace("{n}", n)];
+    if (sitL.length) parts.push(SITUATION.de(sitL));
+    if (negL.length) parts.push(pick(r, DE.neg)(negL));
+    if (posL.length) parts.push((negL.length || t === "poor" ? pick(r, DE.posAfterNeg) : pick(r, DE.pos))(posL));
+    if (o.length === "detailed") parts.push(pick(r, DE.extra[t]));
+    parts.push(pick(r, DE.close[t]));
+    return parts.filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+  }
 
   if (o.lang === "ja") {
     const n = raw || "こちら";
     const parts = [pick(r, JA.open[t]).replace("{n}", n)];
+    if (sitL.length) parts.push(SITUATION.ja(sitL));
     if (negL.length) parts.push(pick(r, JA.neg)(negL));
     if (posL.length) parts.push((negL.length || t === "poor" ? pick(r, JA.posAfterNeg) : pick(r, JA.pos))(posL));
     if (o.length === "detailed") parts.push(pick(r, JA.extra[t]));
@@ -106,6 +153,7 @@ export function demoGenerate(o: {
   const pos = posL.map(lc);
   const fill = (s: string) => s.replace("{N}", cap(name)).replace("{n}", name);
   const parts = [fill(pick(r, EN.open[t]))];
+  if (sitL.length) parts.push(SITUATION.en(sitL));
   if (neg.length) parts.push(pick(r, EN.neg)(neg, neg.length > 1));
   if (pos.length) parts.push((neg.length || t === "poor" ? pick(r, EN.posAfterNeg) : pick(r, EN.pos))(pos, pos.length > 1));
   if (o.length === "detailed") {

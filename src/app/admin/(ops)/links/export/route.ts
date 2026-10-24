@@ -2,15 +2,9 @@ import { and, desc, eq, isNotNull } from "drizzle-orm";
 import { getDb, portals, products, submissions, visits } from "@/db";
 import { requireAdmin, UnauthorizedError } from "@/lib/auth";
 import { getActiveBrand } from "@/lib/brand";
+import { csvCell as cell } from "@/lib/csv";
 
 const MAX_ROWS = 10_000;
-
-// Leading = + - @ make spreadsheets run the cell as a formula; a quote in front keeps it plain text.
-function cell(v: unknown): string {
-  let s = v == null ? "" : String(v);
-  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
-  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
 
 /** Every customer response for the active brand as CSV: who, what they posted, where and when. */
 export async function GET() {

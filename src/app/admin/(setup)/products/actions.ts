@@ -9,7 +9,8 @@ import { getDb, portals, products, highlights, productPortals, examples, links }
 import { qs } from "../flash";
 import { csvToProducts } from "./csv";
 
-type HL = { id?: string; label: string; labelJa: string; polarity: "pos" | "neg" | "both" };
+type HL = { id?: string; label: string; labelJa: string; labelDe: string; polarity: "pos" | "neg" | "both"; kind: "point" | "situation" };
+const MARKETS = ["", "US", "DE", "JP"] as const;
 
 function parseHighlights(raw: string): HL[] {
   try {
@@ -20,7 +21,9 @@ function parseHighlights(raw: string): HL[] {
         id: typeof h.id === "string" && h.id ? h.id : undefined,
         label: String(h.label ?? "").trim().slice(0, 60),
         labelJa: String(h.labelJa ?? "").trim().slice(0, 40),
-        polarity: (["pos", "neg", "both"].includes(h.polarity) ? h.polarity : "pos") as HL["polarity"],
+        labelDe: String(h.labelDe ?? "").trim().slice(0, 60),
+        kind: (h.kind === "situation" ? "situation" : "point") as HL["kind"],
+        polarity: (h.kind === "situation" ? "both" : ["pos", "neg", "both"].includes(h.polarity) ? h.polarity : "pos") as HL["polarity"],
       }))
       .filter((h) => h.label);
   } catch {
@@ -57,6 +60,8 @@ export async function saveProduct(id: string, formData: FormData) {
     praise: long("praise"),
     concerns: long("concerns"),
     url: str("url").slice(0, 500),
+    market: (MARKETS as readonly string[]).includes(str("market")) ? (str("market") as (typeof MARKETS)[number]) : "",
+    priority: Math.max(0, Math.min(9, Math.round(Number(str("priority")) || 0))),
     active: formData.get("active") === "1",
     updatedAt: now,
   };
@@ -76,8 +81,8 @@ export async function saveProduct(id: string, formData: FormData) {
   const existingIds = new Set(existing.map((h) => h.id));
   const writes = list.map((h, i) =>
     h.id && existingIds.has(h.id)
-      ? db.update(highlights).set({ label: h.label, labelJa: h.labelJa, polarity: h.polarity, sort: i }).where(eq(highlights.id, h.id))
-      : db.insert(highlights).values({ id: crypto.randomUUID(), productId: pid, label: h.label, labelJa: h.labelJa, polarity: h.polarity, sort: i }),
+      ? db.update(highlights).set({ label: h.label, labelJa: h.labelJa, labelDe: h.labelDe, polarity: h.polarity, kind: h.kind, sort: i }).where(eq(highlights.id, h.id))
+      : db.insert(highlights).values({ id: crypto.randomUUID(), productId: pid, label: h.label, labelJa: h.labelJa, labelDe: h.labelDe, polarity: h.polarity, kind: h.kind, sort: i }),
   );
   if (writes.length) await db.batch(writes as [(typeof writes)[number], ...(typeof writes)[number][]]);
 

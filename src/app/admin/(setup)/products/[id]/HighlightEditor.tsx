@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Button, Input, Segmented, Icons } from "@/components/ui";
 
 type Polarity = "pos" | "neg" | "both";
-type Item = { key: string; id?: string; label: string; labelJa: string; polarity: Polarity };
+type Kind = "point" | "situation";
+type Item = { key: string; id?: string; label: string; labelJa: string; labelDe: string; polarity: Polarity; kind: Kind };
 
 const POL = [
   { value: "pos" as const, label: "Positive" },
@@ -12,15 +13,23 @@ const POL = [
   { value: "both" as const, label: "Both" },
 ];
 
-export function HighlightEditor({ initial, showJa = false }: { initial: { id: string; label: string; labelJa: string; polarity: Polarity }[]; showJa?: boolean }) {
+const KIND = [
+  { value: "point" as const, label: "Point" },
+  { value: "situation" as const, label: "Situation" },
+];
+
+type Initial = Omit<Item, "key" | "id"> & { id: string };
+
+export function HighlightEditor({ initial, showJa = false, showDe = false }: { initial: Initial[]; showJa?: boolean; showDe?: boolean }) {
   const [items, setItems] = useState<Item[]>(() => initial.map((h) => ({ key: h.id, ...h })));
   const [label, setLabel] = useState("");
   const [pol, setPol] = useState<Polarity>("pos");
+  const [kind, setKind] = useState<Kind>("point");
 
   const add = () => {
     const l = label.trim();
     if (!l) return;
-    setItems((xs) => [...xs, { key: crypto.randomUUID(), label: l, labelJa: "", polarity: pol }]);
+    setItems((xs) => [...xs, { key: crypto.randomUUID(), label: l, labelJa: "", labelDe: "", polarity: kind === "situation" ? "both" : pol, kind }]);
     setLabel("");
   };
   const move = (i: number, d: number) =>
@@ -33,11 +42,14 @@ export function HighlightEditor({ initial, showJa = false }: { initial: { id: st
     });
   const setPolarity = (i: number, p: Polarity) => setItems((xs) => xs.map((x, k) => (k === i ? { ...x, polarity: p } : x)));
   const setJa = (i: number, v: string) => setItems((xs) => xs.map((x, k) => (k === i ? { ...x, labelJa: v } : x)));
+  const setDe = (i: number, v: string) => setItems((xs) => xs.map((x, k) => (k === i ? { ...x, labelDe: v } : x)));
+  const setKindAt = (i: number, v: Kind) =>
+    setItems((xs) => xs.map((x, k) => (k === i ? { ...x, kind: v, polarity: v === "situation" ? "both" : x.polarity } : x)));
   const remove = (i: number) => setItems((xs) => xs.filter((_, k) => k !== i));
 
   return (
     <div className="grid gap-3">
-      <input type="hidden" name="highlights" value={JSON.stringify(items.map(({ id, label, labelJa, polarity }) => ({ id, label, labelJa, polarity })))} />
+      <input type="hidden" name="highlights" value={JSON.stringify(items.map(({ id, label, labelJa, labelDe, polarity, kind }) => ({ id, label, labelJa, labelDe, polarity, kind })))} />
       {items.length === 0 && <p className="text-sm text-ink-3">No highlights yet.</p>}
       <ul className="grid gap-2">
         {items.map((h, i) => (
@@ -54,7 +66,19 @@ export function HighlightEditor({ initial, showJa = false }: { initial: { id: st
                 className="h-9 w-40 text-[13px]"
               />
             )}
-            <Segmented label={`Polarity of ${h.label}`} options={POL} value={h.polarity} onChange={(p) => setPolarity(i, p)} />
+            {showDe && (
+              <Input
+                lang="de"
+                value={h.labelDe}
+                onChange={(e) => setDe(i, e.target.value)}
+                placeholder="Deutsch"
+                aria-label={`German label for ${h.label}`}
+                maxLength={60}
+                className="h-9 w-40 text-[13px]"
+              />
+            )}
+            <Segmented label={`Kind of ${h.label}`} options={KIND} value={h.kind} onChange={(k) => setKindAt(i, k)} />
+            {h.kind === "point" && <Segmented label={`Polarity of ${h.label}`} options={POL} value={h.polarity} onChange={(p) => setPolarity(i, p)} />}
             <span className="flex">
               <Button variant="ghost" size="sm" aria-label={`Move ${h.label} up`} disabled={i === 0} onClick={() => move(i, -1)}>↑</Button>
               <Button variant="ghost" size="sm" aria-label={`Move ${h.label} down`} disabled={i === items.length - 1} onClick={() => move(i, 1)}>↓</Button>
@@ -73,7 +97,8 @@ export function HighlightEditor({ initial, showJa = false }: { initial: { id: st
           maxLength={60}
           className="min-w-[200px] flex-1"
         />
-        <Segmented label="New highlight polarity" options={POL} value={pol} onChange={setPol} />
+        <Segmented label="New highlight kind" options={KIND} value={kind} onChange={setKind} />
+        {kind === "point" && <Segmented label="New highlight polarity" options={POL} value={pol} onChange={setPol} />}
         <Button variant="line" onClick={add}><Icons.Plus size={16} aria-hidden /> Add</Button>
       </div>
     </div>

@@ -3,15 +3,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { sheetNo, initials } from "@/lib/sheet";
 import { reviewCopy } from "@/lib/i18n/review";
+import type { Lang } from "@/lib/i18n/languages";
 import s from "./review.module.css";
 
-type Highlight = { id: string; label: string; polarity: "pos" | "neg" | "both" };
-type PortalView = { id: string; type: string; label: string; url: string; incentive: boolean };
+type Highlight = { id: string; label: string; polarity: "pos" | "neg" | "both"; kind: "point" | "situation" };
+type PortalView = { id: string; type: string; label: string; url: string; incentive: boolean; minChars: number };
 type Props = {
   token: string;
   /** Signed visit token; sent as `visit` in every POST body. */
   visit: string;
-  lang: "en" | "ja";
+  lang: Lang;
+  /** Genuine-experience mode: no draft until rated, and drafts use only what the customer picked or wrote. */
+  strict: boolean;
   brandName: string;
   customerName: string;
   highlights: Highlight[];
@@ -32,6 +35,10 @@ const STAR = "M12 2.8l2.75 5.9 6.45.75-4.78 4.4 1.27 6.38L12 17.05 6.31 20.23l1.
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const NAME_MAX = 80;
 const EMAIL_MAX = 254;
+const WORDS_MAX = 300;
+// Situations fit any rating; points follow the rating's tone.
+const fits = (h: Highlight, low: boolean) =>
+  h.kind === "situation" || h.polarity === "both" || (low ? h.polarity === "neg" : h.polarity === "pos");
 const tone = (r: number) => (r === 0 ? "neutral" : r >= 4 ? "good" : r === 3 ? "mixed" : "poor");
 
 export function Review(p: Props) {
@@ -73,6 +80,9 @@ export function Review(p: Props) {
   const [emailGiven, setEmailGiven] = useState(false);
   const [claimState, setClaimState] = useState<"idle" | "busy" | "sent">("idle");
   const [claimErr, setClaimErr] = useState("");
+  const [words, setWords] = useState("");
+  // The own words the last draft was asked for; updated on blur so typing doesn't fire a request per key.
+  const [wordsSent, setWordsSent] = useState("");
 
   const edited = useRef(false);
   const lastWritten = useRef("");
@@ -82,14 +92,13 @@ export function Review(p: Props) {
   const reqId = useRef(0);
   const editVer = useRef(0);
   const handed = useRef(false);
-  const stateRef = useRef({ rating, selected, len, variant });
-  stateRef.current = { rating, selected, len, variant };
+  const stateRef = useRef({ rating, selected, len, variant, wordsSent });
+  stateRef.current = { rating, selected, len, variant, wordsSent };
 
   const low = rating > 0 && rating <= 3;
-  const visible = useCallback(
-    (h: Highlight) => h.polarity === "both" || (low ? h.polarity === "neg" : h.polarity === "pos"),
-    [low],
-  );
+  const visible = useCallback((h: Highlight) => fits(h, low), [low]);
+  const situations = p.highlights.filter((h) => h.kind === "situation");
+  const points = p.highlights.filter((h) => h.kind !== "situation");
 
   const sync = useCallback(() => {
     const d = draftRef.current;
@@ -145,6 +154,12 @@ export function Review(p: Props) {
     // a draft request started by the customer while we waited takes precedence
     if (reqId.current !== 0) return;
     if (!text) {
+      if (p.strict && stateRef.current.rating === 0) {
+        // nothing to draft from yet: the customer rates first, or writes their own
+        setWaiting(false);
+        setWriting(false);
+        return;
+      }
       void write(false);
       return;
     }
@@ -156,9 +171,7 @@ export function Review(p: Props) {
     const ids = st.selected
       .filter((id) => {
         const h = p.highlights.find((x) => x.id === id);
-        if (!h) return false;
-        const lowNow = st.rating > 0 && st.rating <= 3;
-        return h.polarity === "both" || (lowNow ? h.polarity === "neg" : h.polarity === "pos");
+        return !!h && fits(h, st.rating > 0 && st.rating <= 3);
       })
       .sort();
     const res = await fetch("/api/drafts", {
@@ -171,6 +184,7 @@ export function Review(p: Props) {
         highlightIds: ids,
         length: st.len,
         variant: st.variant,
+        words: st.wordsSent,
       }),
     });
     if (!res.ok) throw new Error("bad");
@@ -264,9 +278,10 @@ export function Review(p: Props) {
     pending.current = null;
     request(pr.explicit);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rating, selected, len, variant]);
+  }, [rating, selected, len, variant, wordsSent]);
 
   function request(explicit: boolean) {
+    if (p.strict && stateRef.current.rating === 0) return; // genuine-experience mode drafts only after a rating
     if (edited.current && !explicit) {
       setSuggest("rewrite");
       return;
@@ -313,7 +328,7 @@ export function Review(p: Props) {
       setSelected((cur) =>
         cur.filter((id) => {
           const h = p.highlights.find((x) => x.id === id);
-          return h && (h.polarity === "both" || (lowNow ? h.polarity === "neg" : h.polarity === "pos"));
+          return !!h && fits(h, lowNow);
         }),
       );
     }
@@ -327,6 +342,12 @@ export function Review(p: Props) {
     pending.current = { explicit: true };
     setLen(v);
   }
+  function sendWords() {
+    const w = words.trim().slice(0, WORDS_MAX);
+    if (w === wordsSent) return;
+    pending.current = { explicit: false };
+    setWordsSent(w);
+  }
   function newDraft() {
     pending.current = { explicit: true };
     setVariant((v) => v + 1);
@@ -337,6 +358,7 @@ export function Review(p: Props) {
     if (!d) return;
     editVer.current++;
     edited.current = d.value !== lastWritten.current;
+    if (error) setError("");
     sync();
     unhand();
   }
@@ -399,6 +421,11 @@ export function Review(p: Props) {
     const d = draftRef.current;
     if (!d) return;
     if (!checkDetails()) return;
+    if (portal.minChars > 0 && d.value.trim().length < portal.minChars) {
+      setError(t.tooShort(portal.minChars));
+      d.focus();
+      return;
+    }
     // Open the portal in the same tap, before any await: iOS Safari blocks window.open once the gesture has passed.
     const copied = navigator.clipboard ? navigator.clipboard.writeText(d.value) : Promise.reject(new Error("no clipboard"));
     window.open(portal.url, "_blank", "noopener");
@@ -491,8 +518,8 @@ export function Review(p: Props) {
       ) : null}
 
       <main>
-        <h1 className={s.h1}>{t.heading(first)}</h1>
-        <p className={s.lede}>{t.lede(primary ? primary.label : t.reviewSiteFallback)}</p>
+        <h1 className={s.h1}>{p.strict ? t.askHeading(first, p.brandName) : t.heading(first)}</h1>
+        <p className={s.lede}>{(p.strict ? t.askLede : t.lede)(primary ? primary.label : t.reviewSiteFallback)}</p>
 
         <section className={s.rate} aria-labelledby="rate-l">
           <h2 id="rate-l" className={s.sr}>{t.ratingLabel}</h2>
@@ -514,8 +541,26 @@ export function Review(p: Props) {
             </div>
             <span className={s.rateWord} aria-live="polite">{t.ratingWords[rating]}</span>
           </div>
-          <div className={s.chips} role="group" aria-label={t.highlightsLabel}>
-            {p.highlights.map((h) => (
+          {situations.length ? (
+            <>
+              <span className={s.groupLabel} id="sit-l">{t.situationLabel}</span>
+              <div className={s.chips} role="group" aria-labelledby="sit-l">
+                {situations.map((h) => (
+                  <button key={h.id} type="button" className={s.chip} aria-pressed={selected.includes(h.id)} onClick={() => toggleChip(h.id)}>
+                    {h.label}
+                  </button>
+                ))}
+              </div>
+              <span className={s.groupLabel} id="pts-l">{t.highlightsLabel}</span>
+            </>
+          ) : null}
+          <div
+            className={s.chips}
+            role="group"
+            aria-label={situations.length ? undefined : t.highlightsLabel}
+            aria-labelledby={situations.length ? "pts-l" : undefined}
+          >
+            {points.map((h) => (
               <button
                 key={h.id}
                 type="button"
@@ -528,6 +573,20 @@ export function Review(p: Props) {
               </button>
             ))}
           </div>
+          {p.strict ? (
+            <div className={s.words}>
+              <label htmlFor="own-words">{t.wordsLabel}</label>
+              <textarea
+                id="own-words"
+                maxLength={WORDS_MAX}
+                value={words}
+                aria-describedby="own-words-hint"
+                onChange={(e) => setWords(e.target.value)}
+                onBlur={sendWords}
+              />
+              <p id="own-words-hint">{t.wordsHint}</p>
+            </div>
+          ) : null}
         </section>
 
         <section ref={stackRef} className={s.stack} aria-label={t.draftLabel}>
@@ -558,6 +617,7 @@ export function Review(p: Props) {
                 rows={5}
                 spellCheck
                 readOnly={waiting}
+                placeholder={p.strict ? t.startHint : undefined}
                 aria-busy={writing}
                 onInput={onInput}
               />

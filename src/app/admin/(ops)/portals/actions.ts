@@ -44,7 +44,8 @@ export async function savePortal(_prev: PortalFormState, formData: FormData): Pr
 
   const db = await getDb();
   // normalizePortal forces allowsIncentives=false for locked types, regardless of what was submitted.
-  const base = normalizePortal({ type, label, url, allowsIncentives: formData.get("allowsIncentives") === "on" });
+  const minChars = Math.max(0, Math.min(2000, Math.round(Number(formData.get("minChars")) || 0)));
+  const base = { ...normalizePortal({ type, label, url, allowsIncentives: formData.get("allowsIncentives") === "on" }), minChars };
 
   if (id) {
     const [existing] = await db.select().from(portals).where(and(eq(portals.id, id), eq(portals.brandId, active.id))).limit(1);

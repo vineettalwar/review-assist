@@ -31,7 +31,7 @@ export default async function PortalsPage({ searchParams }: { searchParams: Prom
       </Note>
 
       {sp.new && !editing && <PortalForm key="new" />}
-      {editing && <PortalForm key={editing.id} initial={{ id: editing.id, type: editing.type, label: editing.label, url: editing.url, allowsIncentives: editing.allowsIncentives }} />}
+      {editing && <PortalForm key={editing.id} initial={{ id: editing.id, type: editing.type, label: editing.label, url: editing.url, allowsIncentives: editing.allowsIncentives, minChars: editing.minChars }} />}
 
       {rows.length === 0 ? (
         <Card className="p-10 text-center">

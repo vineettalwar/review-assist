@@ -19,6 +19,7 @@ const VOICES: { value: Voice; label: string }[] = [
 const LANGS = [
   ["en", "English"],
   ["ja", "Japanese"],
+  ["de", "German"],
 ];
 const PORTAL_TYPES: { type: PortalType; label: string; ph: string }[] = [
   { type: "google", label: "Google", ph: "https://g.page/r/your-place/review" },

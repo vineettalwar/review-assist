@@ -10,14 +10,15 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  const { token, visit, rating, highlightIds, length, variant } = b ?? {};
+  const { token, visit, rating, highlightIds, length, variant, words } = b ?? {};
   const bad =
     typeof token !== "string" || !token || token.length > 64 ||
     typeof visit !== "string" || visit.length > 120 ||
     typeof rating !== "number" || !Number.isInteger(rating) || rating < 0 || rating > 5 ||
     (length !== "short" && length !== "detailed") ||
     typeof variant !== "number" || !Number.isInteger(variant) || variant < 0 || variant > 50 ||
-    !Array.isArray(highlightIds) || highlightIds.length > 10 ||
+    !Array.isArray(highlightIds) || highlightIds.length > 16 ||
+    (words !== undefined && (typeof words !== "string" || words.length > 300)) ||
     !highlightIds.every((x) => typeof x === "string" && x.length > 0 && x.length <= 64);
   if (bad) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
@@ -30,6 +31,7 @@ export async function POST(request: Request) {
       highlightIds: [...(highlightIds as string[])].sort(),
       length: length as "short" | "detailed",
       variant: variant as number,
+      words: typeof words === "string" ? words : "",
     });
     return NextResponse.json({ text: r.text });
   } catch (e) {

@@ -50,7 +50,9 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const linkUrl = link ? `${APP_URL}/r/${link.token}` : "";
   const linkOff = link?.status === "disabled";
   const back = `/admin/products/${id}`;
-  const showJa = parseLanguages(st?.languages).includes("ja");
+  const langs = parseLanguages(st?.languages);
+  const showJa = langs.includes("ja") || p?.market === "JP";
+  const showDe = langs.includes("de") || p?.market === "DE";
   const preview = ctx
     ? buildPrompt({ brand: ctx.brand, product: ctx.product, examples: ctx.examples, memory: ctx.memory, link: { language: "en", visitNotes: "" }, rating: 5, highlights: [], length: "short", variant: 0 })
     : null;
@@ -110,6 +112,29 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             },
             { title: "What kind of product is it?", hint: "e.g. Electric SUV", htmlFor: "category", body: <BigInput id="category" name="category" defaultValue={p?.category ?? ""} /> },
             { title: "Where's the product page?", hint: "Optional.", htmlFor: "url", body: <BigInput id="url" name="url" type="url" placeholder="https://" defaultValue={p?.url ?? ""} /> },
+            {
+              title: "Which market is it reviewed in?",
+              hint: "Fixes the language of its review link: US English, Germany German, Japan Japanese. Priority 1 is the highest.",
+              htmlFor: "market",
+              body: (
+                <div className="flex flex-wrap gap-4">
+                  <Field label="Market" className="w-[220px]">
+                    <Select id="market" name="market" defaultValue={p?.market ?? ""}>
+                      <option value="">Any (follow the visitor)</option>
+                      <option value="US">United States</option>
+                      <option value="DE">Germany</option>
+                      <option value="JP">Japan</option>
+                    </Select>
+                  </Field>
+                  <Field label="Priority" className="w-[140px]">
+                    <Select name="priority" defaultValue={String(p?.priority ?? 0)}>
+                      <option value="0">Not set</option>
+                      {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
+                    </Select>
+                  </Field>
+                </div>
+              ),
+            },
             { title: "What are the key facts?", hint: "Features, specs, what's included. One per line.", htmlFor: "knowledge", long: true, body: <BigTextarea id="knowledge" name="knowledge" rows={5} defaultValue={p?.knowledge ?? ""} /> },
             { title: "Who is it for?", hint: "e.g. Families switching from a petrol SUV", htmlFor: "audience", long: true, body: <BigTextarea id="audience" name="audience" rows={2} defaultValue={p?.audience ?? ""} /> },
             { title: "What moments do customers go through?", hint: "e.g. Test drive, Delivery day, First road trip", htmlFor: "experience", long: true, body: <BigTextarea id="experience" name="experience" defaultValue={p?.experience ?? ""} /> },
@@ -118,8 +143,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             { title: "Anything to never mention?", hint: "e.g. prices, discounts, medical claims", htmlFor: "avoid", long: true, body: <BigTextarea id="avoid" name="avoid" rows={2} defaultValue={p?.avoid ?? ""} /> },
             {
               title: "Which highlights can customers tap?",
-              hint: "Positive show for 4–5 stars, negative for 1–3.",
-              body: <HighlightEditor showJa={showJa} initial={hs.map((h) => ({ id: h.id, label: h.label, labelJa: h.labelJa, polarity: h.polarity }))} />,
+              hint: "Points: positive show for 4–5 stars, negative for 1–3. Situations (where, why, how long) show for every rating.",
+              body: <HighlightEditor showJa={showJa} showDe={showDe} initial={hs.map((h) => ({ id: h.id, label: h.label, labelJa: h.labelJa, labelDe: h.labelDe, polarity: h.polarity, kind: h.kind }))} />,
             },
             {
               title: "Where should reviews go?",

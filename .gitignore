@@ -9,3 +9,6 @@ next-env.d.ts
 *.tsbuildinfo
 _tmp
 .DS_Store
+
+# Client data (real clients): loaded into the database with scripts/load-client.ts, never committed.
+clients/

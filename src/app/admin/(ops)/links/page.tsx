@@ -3,8 +3,36 @@ import { redirect } from "next/navigation";
 import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import { getDb, portals, products, submissions, visits } from "@/db";
 import { getActiveBrand } from "@/lib/brand";
-import { Card, PageHeader, Pill, Table, Td, Th, Tr, buttonClass } from "@/components/ui";
+import { Card, Input, PageHeader, Pill, Select, SubmitButton, Table, Td, Textarea, Th, Tr, buttonClass } from "@/components/ui";
 import { relativeTime } from "./languages";
+import { setTracking } from "./actions";
+
+const TRACK_LABEL = { submitted: "Submitted", pending: "Pending", published: "Published", rejected: "Rejected" } as const;
+const TRACK_TONE = { submitted: "neutral", pending: "blue", published: "green", rejected: "amber" } as const;
+
+type TrackRow = { id: string; trackStatus: keyof typeof TRACK_LABEL; publishedUrl: string; screenshotUrl: string; trackNotes: string };
+
+/** Status on the portal plus proof links, edited in place after checking the site. */
+function TrackingCell({ r }: { r: TrackRow }) {
+  return (
+    <details className="text-[13px]">
+      <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+        <Pill tone={TRACK_TONE[r.trackStatus]}>{TRACK_LABEL[r.trackStatus]}</Pill>
+        {r.publishedUrl && <span className="ml-1.5 text-ink-3">· link</span>}
+      </summary>
+      <form action={setTracking} className="mt-2 grid w-64 gap-2">
+        <input type="hidden" name="id" value={r.id} />
+        <Select name="status" defaultValue={r.trackStatus} aria-label="Status">
+          {Object.entries(TRACK_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        </Select>
+        <Input name="publishedUrl" type="url" placeholder="Published review URL" defaultValue={r.publishedUrl} aria-label="Published review URL" />
+        <Input name="screenshotUrl" type="url" placeholder="Screenshot link" defaultValue={r.screenshotUrl} aria-label="Screenshot link" />
+        <Textarea name="notes" rows={2} placeholder="Notes" defaultValue={r.trackNotes} aria-label="Notes" />
+        <div><SubmitButton size="sm">Save</SubmitButton></div>
+      </form>
+    </details>
+  );
+}
 
 export const dynamic = "force-dynamic";
 const PAGE_SIZE = 50;
@@ -34,7 +62,10 @@ export default async function LinksPage({ searchParams }: { searchParams: Promis
   // The review each customer actually posted: latest submission per visit (a visit can copy up to 3 times).
   const subs = rows.length
     ? await db
-        .select({ visitId: submissions.visitId, finalText: submissions.finalText, edited: submissions.edited, createdAt: submissions.createdAt })
+        .select({
+          id: submissions.id, visitId: submissions.visitId, finalText: submissions.finalText, edited: submissions.edited, createdAt: submissions.createdAt,
+          trackStatus: submissions.trackStatus, publishedUrl: submissions.publishedUrl, screenshotUrl: submissions.screenshotUrl, trackNotes: submissions.trackNotes,
+        })
         .from(submissions)
         .where(and(eq(submissions.brandId, b.id), inArray(submissions.visitId, rows.map((v) => v.id))))
     : [];
@@ -46,7 +77,14 @@ export default async function LinksPage({ searchParams }: { searchParams: Promis
     <>
       <PageHeader
         title="Responses"
-        action={rows.length > 0 ? <a href="/admin/links/export" className={buttonClass("line", "sm")} download>Export CSV</a> : undefined}
+        action={
+          rows.length > 0 ? (
+            <span className="flex gap-2">
+              <a href="/admin/links/tracking" className={buttonClass("line", "sm")} download>Tracking sheet</a>
+              <a href="/admin/links/export" className={buttonClass("line", "sm")} download>Export CSV</a>
+            </span>
+          ) : undefined
+        }
       />
 
       {rows.length === 0 ? (
@@ -56,7 +94,7 @@ export default async function LinksPage({ searchParams }: { searchParams: Promis
           <Card className="overflow-x-auto pt-3.5">
             <Table>
               <thead>
-                <tr><Th>Customer</Th><Th>Review</Th><Th>Product</Th><Th>Rating</Th><Th className="hidden md:table-cell">Posted to</Th><Th className="hidden sm:table-cell">When</Th></tr>
+                <tr><Th>Customer</Th><Th>Review</Th><Th>Product</Th><Th>Rating</Th><Th className="hidden md:table-cell">Posted to</Th><Th className="hidden sm:table-cell">When</Th><Th>Tracking</Th></tr>
               </thead>
               <tbody>
                 {rows.map((v) => (
@@ -90,6 +128,10 @@ export default async function LinksPage({ searchParams }: { searchParams: Promis
                     <Td className="tabular-nums">{v.rating ? `${v.rating}★` : "—"}</Td>
                     <Td className="hidden md:table-cell">{(v.portalId && portalLabel.get(v.portalId)) || "—"}</Td>
                     <Td className="hidden text-ink-3 sm:table-cell">{relativeTime(v.copiedAt ?? v.createdAt, now)}</Td>
+                    <Td>{(() => {
+                      const r = reviewOf.get(v.id);
+                      return r ? <TrackingCell r={r} /> : <span className="text-ink-3">—</span>;
+                    })()}</Td>
                   </Tr>
                 ))}
               </tbody>

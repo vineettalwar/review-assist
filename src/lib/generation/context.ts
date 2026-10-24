@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNull, or } from "drizzle-orm";
 import { getDb, brand, settings, products, highlights, examples, memories, inspirations } from "@/db";
-import type { Lang } from "@/lib/i18n/languages";
+import { chipLabel, type Lang } from "@/lib/i18n/languages";
 import type { GenContext } from "./types";
 
 /** Everything the model may know for one draft. One round of parallel queries after the product lookup. */
@@ -70,7 +70,7 @@ export async function loadContext(productId: string, rating: number, highlightId
     brand: b,
     settings: s,
     product,
-    highlights: hl.map((h) => ({ label: lang === "ja" && h.labelJa ? h.labelJa : h.label, polarity: h.polarity })),
+    highlights: hl.map((h) => ({ label: chipLabel(h, lang), polarity: h.polarity, kind: h.kind })),
     examples: picked,
     lang,
   };
@@ -78,8 +78,12 @@ export async function loadContext(productId: string, rating: number, highlightId
 
 const lines = (s: string | undefined) => (s ?? "").split(/\r?\n/).map((l) => l.replace(/^[-•*]\s*/, "").trim()).filter(Boolean);
 
-/** Context lines a draft can lean on; the plan picks one per draft so customers don't all write about the same thing. */
-export function focusPool(ctx: Pick<GenContext, "product" | "memory">): string[] {
+/**
+ * Context lines a draft can lean on; the plan picks one per draft so customers don't all write about the same thing.
+ * Empty in genuine-experience mode: there a draft may only use what the customer picked or wrote.
+ */
+export function focusPool(ctx: Pick<GenContext, "product" | "memory" | "brand">): string[] {
+  if (ctx.brand?.strict) return [];
   const p = ctx.product;
   return [
     ...lines(p.experience),

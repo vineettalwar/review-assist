@@ -1,8 +1,9 @@
 import { initials } from "@/lib/sheet";
 import { reviewCopy } from "@/lib/i18n/review";
+import type { Lang } from "@/lib/i18n/languages";
 import s from "./review.module.css";
 
-export function Inactive({ brand, lang }: { brand: string; lang: "en" | "ja" }) {
+export function Inactive({ brand, lang }: { brand: string; lang: Lang }) {
   const t = reviewCopy(lang);
   return (
     <div className={s.page} lang={lang}>

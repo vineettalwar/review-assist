@@ -141,5 +141,6 @@ export function planToPrompt(p: Plan, lang: Lang): string {
   ];
   if (p.focus) lines.push(`- If it fits the rating and highlights, lean on this point (only as stated, no new facts): ${p.focus}`);
   if (lang === "ja") lines.push("- Apply these to natural Japanese; do not translate the instructions literally.");
+  if (lang === "de") lines.push("- Apply these to natural German; do not translate the instructions literally.");
   return lines.join("\n");
 }

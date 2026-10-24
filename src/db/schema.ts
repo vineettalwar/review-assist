@@ -13,6 +13,10 @@ export const brand = sqliteTable("brand", {
   // Brand brain: who the customers are and brand-level facts every draft may use (one per line).
   audience: text("audience").notNull().default(""),
   facts: text("facts").notNull().default(""),
+  // Client rule set, JSON { draft: string[], team: string[] }. Draft rules go into every prompt; team rules never reach the AI.
+  rules: text("rules").notNull().default('{"draft":[],"team":[]}'),
+  // Genuine-experience mode: no draft before a rating, and drafts use only what the customer picked or wrote.
+  strict: integer("strict", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("created_at").notNull().default(0),
   updatedAt: integer("updated_at").notNull().default(0),
 });
@@ -30,6 +34,9 @@ export const products = sqliteTable("products", {
   experience: text("experience").notNull().default(""),
   praise: text("praise").notNull().default(""),
   concerns: text("concerns").notNull().default(""),
+  // Market the product is reviewed in ("" = any). Fixes the language of its product link.
+  market: text("market", { enum: ["", "US", "DE", "JP"] }).notNull().default(""),
+  priority: integer("priority").notNull().default(0), // 0 = unset, 1 = highest
   active: integer("active", { mode: "boolean" }).notNull().default(true),
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull(),
@@ -42,6 +49,9 @@ export const highlights = sqliteTable("highlights", {
   polarity: text("polarity", { enum: ["pos", "neg", "both"] }).notNull().default("pos"),
   sort: integer("sort").notNull().default(0),
   labelJa: text("label_ja").notNull().default(""),
+  labelDe: text("label_de").notNull().default(""),
+  // "situation" = where, why or how long (shown first, any rating); "point" = what stood out.
+  kind: text("kind", { enum: ["point", "situation"] }).notNull().default("point"),
 }, (t) => [index("highlights_product").on(t.productId)]);
 
 export const examples = sqliteTable("examples", {
@@ -62,6 +72,7 @@ export const portals = sqliteTable("portals", {
   url: text("url").notNull(),
   allowsIncentives: integer("allows_incentives", { mode: "boolean" }).notNull().default(false),
   isDefault: integer("is_default", { mode: "boolean" }).notNull().default(false),
+  minChars: integer("min_chars").notNull().default(0), // the site rejects shorter reviews; 0 = no minimum
   sort: integer("sort").notNull().default(0),
 }, (t) => [index("portals_brand").on(t.brandId)]);
 
@@ -163,6 +174,11 @@ export const submissions = sqliteTable("submissions", {
   finalText: text("final_text").notNull(),
   edited: integer("edited", { mode: "boolean" }).notNull().default(false),
   learnedAt: integer("learned_at"),
+  // Tracking, set by the admin after checking the portal.
+  trackStatus: text("track_status", { enum: ["submitted", "pending", "published", "rejected"] }).notNull().default("submitted"),
+  publishedUrl: text("published_url").notNull().default(""),
+  screenshotUrl: text("screenshot_url").notNull().default(""),
+  trackNotes: text("track_notes").notNull().default(""),
   createdAt: integer("created_at").notNull(),
 }, (t) => [index("submissions_brand").on(t.brandId, t.edited), index("submissions_link_visit").on(t.linkId, t.visitId), index("submissions_product_recent").on(t.productId, t.createdAt)]);
 

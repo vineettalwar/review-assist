@@ -6,12 +6,15 @@ export type DraftLength = "short" | "detailed";
 export interface PromptHighlight {
   label: string;
   polarity: string;
+  kind?: "point" | "situation";
 }
 
 export interface PromptLink {
   language: string;
   visitNotes: string;
   customerName?: string;
+  /** What the customer typed on the review page themselves ("In your own words"). */
+  customerWords?: string;
 }
 
 export interface PromptMemory {

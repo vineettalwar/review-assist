@@ -63,6 +63,15 @@ export type ReviewCopy = {
   inactiveTitle: string;
   inactiveBody: (brand: string) => string;
   inactiveBrandFallback: string;
+
+  /** Genuine-experience mode: a neutral ask instead of "your review is drafted". */
+  askHeading: (firstName: string, brand: string) => string;
+  askLede: (portal: string) => string;
+  startHint: string;
+  situationLabel: string;
+  wordsLabel: string;
+  wordsHint: string;
+  tooShort: (min: number) => string;
 };
 
 const words = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
@@ -136,6 +145,14 @@ export const REVIEW_COPY: Record<Lang, ReviewCopy> = {
     inactiveTitle: "This link isn’t active.",
     inactiveBody: (brand) => `It may have expired. If you meant to leave a review, ask ${brand} for a new link.`,
     inactiveBrandFallback: "the business",
+
+    askHeading: (n, b) => `${n ? `Hi ${n}. ` : ""}How was your experience with ${b || "us"}?`,
+    askLede: (portal) => `Positive, neutral or critical: honest feedback on ${portal} helps other customers. Rate it, tick what fits, and we’ll draft it from your answers only.`,
+    startHint: "Pick a star rating to start your draft, or write your own here.",
+    situationLabel: "Where, why, how long",
+    wordsLabel: "In your own words (optional)",
+    wordsHint: "Anything you noticed. We only use what you tick and write here.",
+    tooShort: (min) => `This site needs at least ${min} characters. Add a little more about your experience.`,
   },
   ja: {
     ratingWords: ["タップして評価", "不満", "やや不満", "ふつう", "満足", "大満足"],
@@ -203,10 +220,94 @@ export const REVIEW_COPY: Record<Lang, ReviewCopy> = {
     inactiveBody: (brand) =>
       `有効期限が切れている可能性があります。レビューをご投稿いただける場合は、${brand}に新しいリンクをお問い合わせください。`,
     inactiveBrandFallback: "販売元",
+
+    askHeading: (n, b) => `${n ? `${n}様、` : ""}${b || "当社"}のご利用はいかがでしたか？`,
+    askLede: (portal) => `良い点も気になった点も、率直なご感想が${portal}で他のお客様の参考になります。評価と当てはまる項目を選ぶと、そのご回答だけをもとに下書きを作ります。`,
+    startHint: "星を選ぶと下書きを作成します。ご自身で書いていただくこともできます。",
+    situationLabel: "使った場所・目的・期間",
+    wordsLabel: "ご自身の言葉で（任意）",
+    wordsHint: "気づいたことがあればご記入ください。選んだ項目とここに書いた内容だけを使います。",
+    tooShort: (min) => `この投稿先は${min}文字以上が必要です。ご体験をもう少し加えてください。`,
+  },
+  de: {
+    ratingWords: ["Tippen zum Bewerten", "Schlecht", "Nicht gut", "Okay", "Gut", "Sehr gut"],
+    heading: (n) => (n ? `Hallo ${n}, Ihr Bewertungsentwurf ist fertig.` : "Ihr Bewertungsentwurf ist fertig."),
+    lede: (portal) => `Bewerten Sie Ihre Erfahrung, ändern Sie jedes Wort, und wir übergeben eine Kopie an ${portal}.`,
+    reviewSiteFallback: "das Bewertungsportal",
+
+    ratingLabel: "Ihre Bewertung",
+    starLabel: (n) => `${n} ${n === 1 ? "Stern" : "Sterne"}`,
+    highlightsLabel: "Was aufgefallen ist",
+
+    draftLabel: "Ihr Bewertungsentwurf",
+    sheetNo: (no) => `NR. ${no}`,
+    stampCopied: "KOPIERT",
+    carbonCopy: (no) => `NR. ${no} · KOPIE`,
+    carbonTo: (portal) => (portal ? `AN ${portal.toUpperCase()}` : ""),
+    lengthLabel: "Länge",
+    short: "Kurz",
+    detailed: "Ausführlich",
+    editableLabel: "Ihre Bewertung, bearbeitbar",
+    writingStatus: "Entwurf wird geschrieben…",
+    newDraft: "Neuer Entwurf",
+    writing: "Schreibt…",
+    rewriteFor: (n) => `Für ${n} ${n === 1 ? "Stern" : "Sterne"} neu schreiben`,
+    rewriteHighlights: "Mit dieser Auswahl neu schreiben",
+    undo: "Rückgängig",
+    count: (t) => {
+      const n = words(t);
+      return `${n} ${n === 1 ? "Wort" : "Wörter"}`;
+    },
+    draftError: "Neuer Entwurf nicht möglich. Ihr Text bleibt unverändert.",
+
+    postLabel: "Bewertung veröffentlichen",
+    detailsHeading: "Ihre Angaben",
+    nameLabel: "Name",
+    emailLabel: "E-Mail",
+    emailPlaceholder: "sie@beispiel.de",
+    emailInvalid: "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+    detailsToggle: "Name und E-Mail hinzufügen (optional)",
+    contactOk: (brand) => `${brand} darf mich zu dieser Erfahrung kontaktieren.`,
+    privacy: (brand) => `Optional. Nur ${brand} sieht diese Angaben, sie erscheinen nie in Ihrer Bewertung.`,
+    brandFallback: "das Unternehmen",
+    googleSteps: (r) => [
+      r ? `Tippen Sie auf ${r} ${r === 1 ? "Stern" : "Sterne"}.` : "Tippen Sie auf Ihre Sterne.",
+      "Halten Sie das Textfeld gedrückt und wählen Sie Einfügen.",
+      "Tippen Sie auf Posten.",
+    ],
+
+    copyAndOpen: (portal) => `Kopieren & ${portal} öffnen`,
+    orPostOn: "oder veröffentlichen auf",
+    copyFallback: "Automatisches Kopieren hat nicht geklappt. Ihr Text ist oben markiert: gedrückt halten, dann Kopieren.",
+    afterCopied: (portal) => `Kopiert. Fügen Sie den Text bei ${portal} ein.`,
+    afterNotCopied: (portal) => `Kopieren Sie den Text und fügen Sie ihn bei ${portal} ein.`,
+    afterThanks: (n) => `Wir haben es in einem neuen Tab geöffnet. Danke, dass Sie sich die Zeit nehmen${n ? `, ${n}` : ""}.`,
+    openAgain: "Erneut öffnen",
+    copyAgain: "Erneut kopieren",
+
+    claimTo: (email) => `Wir senden es an ${email}.`,
+    claimEmailLabel: "E-Mail-Adresse für den Versand",
+    claimSend: "Senden",
+    claimSent: "Gesendet. Bitte prüfen Sie Ihr Postfach.",
+    claimError: "Etwas ist schiefgelaufen. Bitte erneut versuchen.",
+
+    footer: "Veröffentlichen Sie nur, was Ihrer echten Erfahrung entspricht.",
+
+    inactiveTitle: "Dieser Link ist nicht aktiv.",
+    inactiveBody: (brand) => `Er ist möglicherweise abgelaufen. Wenn Sie eine Bewertung schreiben möchten, bitten Sie ${brand} um einen neuen Link.`,
+    inactiveBrandFallback: "das Unternehmen",
+
+    askHeading: (n, b) => `${n ? `Hallo ${n}, w` : "W"}ie zufrieden waren Sie mit Ihrer Erfahrung mit ${b || "uns"}?`,
+    askLede: (portal) => `Wir freuen uns über Ihr ehrliches Feedback bei ${portal}, ob positiv, neutral oder kritisch. Bewerten Sie, wählen Sie aus, was zutrifft, und wir formulieren einen Entwurf nur aus Ihren Angaben.`,
+    startHint: "Wählen Sie eine Sternebewertung, um den Entwurf zu starten, oder schreiben Sie selbst.",
+    situationLabel: "Wo, warum, wie lange",
+    wordsLabel: "In Ihren eigenen Worten (optional)",
+    wordsHint: "Was Ihnen aufgefallen ist. Wir verwenden nur, was Sie hier auswählen und schreiben.",
+    tooShort: (min) => `Dieses Portal verlangt mindestens ${min} Zeichen. Ergänzen Sie bitte etwas mehr zu Ihrer Erfahrung.`,
   },
 };
 
 /** Copy for a language, falling back to English. */
 export function reviewCopy(lang: Lang | string | null | undefined): ReviewCopy {
-  return lang === "ja" ? REVIEW_COPY.ja : REVIEW_COPY.en;
+  return lang === "ja" ? REVIEW_COPY.ja : lang === "de" ? REVIEW_COPY.de : REVIEW_COPY.en;
 }

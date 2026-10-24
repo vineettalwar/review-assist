@@ -21,6 +21,14 @@
 .chip{font-size:14px;padding:7px 12px!important;border:1px solid var(--color-rule)!important;border-radius:999px;transition:background .2s,border-color .2s,color .2s}
 .chip:hover{border-color:var(--color-ink)!important}
 .chip[aria-pressed="true"]{background:var(--color-ink)!important;color:#fff!important;border-color:var(--color-ink)!important}
+.groupLabel{display:block;font-size:13px;color:var(--color-ink-2);margin-top:18px}
+.groupLabel + .chips{margin-top:8px}
+.words{display:flex;flex-direction:column;gap:4px;margin-top:18px}
+.words label{font-size:13px;color:var(--color-ink-2)}
+.words textarea{width:100%;min-height:72px;border:1px solid var(--color-rule-strong);border-radius:var(--r);padding:10px 12px;font:inherit;font-size:16px;line-height:1.45;background:var(--color-paper);color:var(--color-ink);resize:vertical;transition:border-color .2s}
+.words textarea:hover{border-color:var(--color-ink-3)}
+.words textarea:focus-visible{outline:2px solid var(--color-carbon);outline-offset:1px;border-color:var(--color-carbon)}
+.words p{font-size:13px;color:var(--color-ink-3)}
 
 /* The carbon copy sits fully behind the sheet and is hidden until handover (.handed);
    before, a permanent 30px bottom padding + bottom-aligned carbon text let the last
