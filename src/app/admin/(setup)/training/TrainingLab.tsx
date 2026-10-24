@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Chip, Field, Input, Segmented, Select, Textarea, cn } from "@/components/ui";
 import {
-  addInspiration, deleteInspiration, dislikeDraft, neverSay, runTraining, saveExampleFromPlayground, setInspirationActive,
+  addInspiration, deleteInspiration, dislikeDraft, neverSay, runRawRequest, runTraining, saveDefaultExtra, saveExampleFromPlayground, setInspirationActive,
   type TrainingResult,
 } from "./actions";
 import { proposeFromPlayground } from "../memory/actions";
@@ -15,12 +15,13 @@ type LabProduct = { id: string; name: string; highlights: { id: string; label: s
 export type LabProvider = { id: "openrouter" | "anthropic" | "openai"; label: string; connected: boolean; model: string; models: string[] };
 type LabInspiration = { id: string; text: string; note: string; active: boolean; scope: string | null };
 type ColumnSetup = { provider: string; model: string };
-type Draft = { text: string; original: string; result: TrainingResult | null };
+/** `request` is the editable JSON for this column; the fallback column has none. */
+type Draft = { text: string; original: string; result: TrainingResult | null; request: string };
 type Tally = { drafts: number; input: number; output: number; cost: number; priced: number; estimated: boolean };
 
 const STAR = "M12 2.8l2.75 5.9 6.45.75-4.78 4.4 1.27 6.38L12 17.05 6.31 20.23l1.27-6.38L2.8 9.45l6.45-.75z";
 const TALLY_KEY = "ra-training-usage";
-const EMPTY: Draft = { text: "", original: "", result: null };
+const EMPTY: Draft = { text: "", original: "", result: null, request: "" };
 
 const money = (n: number) => (n === 0 ? "$0" : n < 0.01 ? `$${n.toPrecision(2)}` : `$${n.toFixed(3)}`);
 const num = (n: number) => n.toLocaleString("en-US");
@@ -44,7 +45,7 @@ function readTally(): Record<string, Tally> {
 }
 
 export function TrainingLab({
-  products, languages, defaultLanguage, providers, activeProvider, inspirations,
+  products, languages, defaultLanguage, providers, activeProvider, inspirations, currentExtra,
 }: {
   products: LabProduct[];
   languages: readonly { value: string; label: string }[];
@@ -52,6 +53,8 @@ export function TrainingLab({
   providers: LabProvider[];
   activeProvider: string | null;
   inspirations: LabInspiration[];
+  /** Settings extra instructions now applied to every customer draft. */
+  currentExtra: string;
 }) {
   const router = useRouter();
   const [productId, setProductId] = useState(products[0]?.id ?? "");
@@ -113,8 +116,15 @@ export function TrainingLab({
       const r = await runTraining({ productId, rating, highlightIds: effective, length, notes, language, variant: nextVariant }, cols);
       if (!r.ok) return setMsg({ tone: "error", text: r.error });
       setVariant(nextVariant);
-      setDrafts(r.columns.map((c) => ({ text: c.ok ? c.text : "", original: c.ok ? c.text : "", result: c })));
-      setFallback({ text: r.fallback, original: r.fallback, result: null });
+      setDrafts(
+        r.columns.map((c, i) => ({
+          text: c.ok ? c.text : "",
+          original: c.ok ? c.text : "",
+          result: c,
+          request: JSON.stringify({ model: cols[i]?.model ?? c.model, ...r.request }, null, 2),
+        })),
+      );
+      setFallback({ text: r.fallback, original: r.fallback, result: null, request: "" });
       record(r.columns);
     });
   }
@@ -220,6 +230,12 @@ export function TrainingLab({
             subtitle={d.result ? d.result.model : cols[i].model}
             draft={d}
             onText={(text) => setDrafts((all) => all.map((x, j) => (j === i ? { ...x, text } : x)))}
+            onRequest={(request) => setDrafts((all) => all.map((x, j) => (j === i ? { ...x, request } : x)))}
+            onResult={(res) => {
+              setDrafts((all) => all.map((x, j) => (j === i ? { ...x, result: res, text: res.ok ? res.text : x.text, original: res.ok ? res.text : x.original } : x)));
+              record([res]);
+            }}
+            provider={cols[i].provider} currentExtra={currentExtra}
             productId={productId} rating={rating} scope={scope} pending={pending}
             onMsg={setMsg}
           />
@@ -241,12 +257,17 @@ export function TrainingLab({
 }
 
 function DraftColumn({
-  title, subtitle, draft, onText, productId, rating, scope, pending, onMsg,
+  title, subtitle, draft, onText, onRequest, onResult, provider, currentExtra, productId, rating, scope, pending, onMsg,
 }: {
   title: string;
   subtitle: string;
   draft: Draft;
   onText: (t: string) => void;
+  /** Model columns only: edit the request JSON and send it. */
+  onRequest?: (json: string) => void;
+  onResult?: (r: TrainingResult) => void;
+  provider?: string;
+  currentExtra?: string;
   productId: string;
   rating: number;
   scope: "brand" | "product";
@@ -259,9 +280,43 @@ function DraftColumn({
   const [dislike, setDislike] = useState(false);
   const [reasons, setReasons] = useState<string[]>([]);
   const [note, setNote] = useState("");
+  const [tab, setTab] = useState<"draft" | "request" | "response">("draft");
+  const [reqErr, setReqErr] = useState("");
+  const [confirmExtra, setConfirmExtra] = useState<string | null>(null);
   const r = draft.result;
   const failed = r && !r.ok;
   const words = draft.text.trim().split(/\s+/).filter(Boolean).length;
+  const technical = !!onRequest;
+
+  const send = () =>
+    startBusy(async () => {
+      setReqErr("");
+      const res = await runRawRequest({ provider: provider ?? "", request: draft.request });
+      if (!res.ok) return setReqErr(res.error);
+      onResult?.(res.result);
+      setTab(res.result.ok ? "draft" : "response");
+    });
+
+  /** The edited extra_instructions, or an inline error when the JSON can't be read. */
+  const editedExtra = (): string | null => {
+    try {
+      const o = JSON.parse(draft.request) as { extra_instructions?: unknown };
+      if (typeof o.extra_instructions === "string") return o.extra_instructions.trim();
+      setReqErr("Add an \"extra_instructions\" text field to save it as the default.");
+    } catch {
+      setReqErr("Fix the JSON first.");
+    }
+    return null;
+  };
+
+  const saveExtra = (text: string) =>
+    startBusy(async () => {
+      const res = await saveDefaultExtra(text);
+      if (!res.ok) return setReqErr(res.error);
+      setConfirmExtra(null);
+      onMsg({ tone: "ok", text: "Saved. These extra instructions now apply to every customer draft, for all clients." });
+      router.refresh();
+    });
 
   const like = () =>
     startBusy(async () => {
@@ -299,6 +354,67 @@ function DraftColumn({
         <span className="text-[13px] font-semibold">{title}</span>
         <span className="truncate font-mono text-[11px] text-ink-3" title={subtitle}>{subtitle}</span>
       </div>
+      {technical && (
+        <div role="tablist" aria-label={`${title} view`} className="flex gap-1 border-b border-rule px-3 py-1.5">
+          {(["draft", "request", "response"] as const).map((t) => (
+            <button
+              key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
+              disabled={t !== "draft" && !draft.request}
+              className={cn("rounded px-2.5 py-1 text-[12px] font-medium capitalize disabled:opacity-40", tab === t ? "bg-ink text-white" : "text-ink-2 hover:bg-surface")}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
+      {technical && tab === "request" && (
+        <div className="grid flex-1 content-start gap-2 p-3">
+          <textarea
+            aria-label={`${title} request JSON, editable`}
+            value={draft.request}
+            spellCheck={false}
+            onChange={(e) => { onRequest?.(e.target.value); if (reqErr) setReqErr(""); }}
+            rows={16}
+            className="block w-full resize-y rounded border border-rule bg-surface px-3 py-2 font-mono text-[12px] leading-[1.5] text-ink outline-none focus-visible:border-carbon"
+          />
+          {reqErr && <p role="alert" className="text-[13px] text-danger">{reqErr}</p>}
+          <div className="flex flex-wrap gap-1">
+            <Button size="sm" onClick={send} disabled={busy || pending}>{busy ? "Sending…" : "Send this"}</Button>
+            <Button size="sm" variant="ghost" disabled={busy} onClick={() => { const t = editedExtra(); if (t !== null) setConfirmExtra(t); }}>
+              Save extra instructions as default
+            </Button>
+          </div>
+          <p className="text-[12px] text-ink-3">Edits here are experiments: customers never get them unless you save the extra instructions as default. Keys are added on the server and never shown.</p>
+          {confirmExtra !== null && (
+            <div role="alertdialog" aria-label="Confirm default extra instructions" className="grid gap-2 rounded border border-warn bg-warn-wash p-3 text-[13px]">
+              <p className="font-semibold">Use these extra instructions for every customer draft, for all clients?</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div><div className="text-ink-3">Now</div><pre className="mt-1 whitespace-pre-wrap break-words font-sans">{currentExtra?.trim() || "(none)"}</pre></div>
+                <div><div className="text-ink-3">New</div><pre className="mt-1 whitespace-pre-wrap break-words font-sans">{confirmExtra || "(none)"}</pre></div>
+              </div>
+              <div className="flex gap-1">
+                <Button size="sm" onClick={() => saveExtra(confirmExtra)} disabled={busy}>Yes, save as default</Button>
+                <Button size="sm" variant="ghost" onClick={() => setConfirmExtra(null)} disabled={busy}>Cancel</Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      {technical && tab === "response" && (
+        <div className="grid flex-1 content-start gap-2 p-3">
+          {r ? (
+            <>
+              <p className="text-[12px] text-ink-3">{r.ok ? usageLine(r) : r.error}</p>
+              <pre aria-label={`${title} raw response`} className="max-h-[420px] overflow-auto rounded border border-rule bg-surface px-3 py-2 font-mono text-[12px] leading-[1.5]">
+                {JSON.stringify(r.raw ?? null, null, 2)}
+              </pre>
+            </>
+          ) : (
+            <p className="text-sm text-ink-3">Generate or send a request to see the raw response.</p>
+          )}
+        </div>
+      )}
+      {(!technical || tab === "draft") && (<>
       <textarea
         ref={ref}
         aria-label={`${title} draft, editable`}
@@ -331,6 +447,7 @@ function DraftColumn({
           <div><Button size="sm" onClick={saveDislike} disabled={busy}>Save as rules</Button></div>
         </div>
       )}
+      </>)}
     </div>
   );
 }

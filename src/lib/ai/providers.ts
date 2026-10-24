@@ -63,7 +63,8 @@ export interface Usage {
   costSource: "provider" | "estimate" | null;
 }
 
-export type CallResult = { ok: true; text: string; usage?: Usage } | { ok: false; error: string };
+/** `raw` is the provider's parsed JSON response, kept for the Training page's response view. */
+export type CallResult = { ok: true; text: string; usage?: Usage; raw?: unknown } | { ok: false; error: string; raw?: unknown };
 
 /** USD per million tokens [input, output] for direct keys; OpenRouter reports its own billed cost. */
 const PRICES: Record<string, [number, number]> = {
@@ -153,9 +154,11 @@ export function cleanOutput(s: string) {
 
 function finish(r: Awaited<ReturnType<typeof post>>, pick: (json: unknown) => string, id: ProviderId, model: string): CallResult {
   if ("error" in r) return { ok: false, error: r.error };
-  if (r.status < 200 || r.status >= 300) return { ok: false, error: describe(r.status, errMessage(r.json)) };
+  if (r.status < 200 || r.status >= 300) return { ok: false, error: describe(r.status, errMessage(r.json)), raw: r.json };
   const text = cleanOutput(pick(r.json));
-  return text ? { ok: true, text, usage: usageFrom(id, model, r.json) } : { ok: false, error: "The model returned an empty reply." };
+  return text
+    ? { ok: true, text, usage: usageFrom(id, model, r.json), raw: r.json }
+    : { ok: false, error: "The model returned an empty reply.", raw: r.json };
 }
 
 export async function callProvider(id: ProviderId, key: string, prompt: { system: string; user: string }, cfg: CallConfig): Promise<CallResult> {

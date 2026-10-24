@@ -220,6 +220,22 @@ export const inspirations = sqliteTable("inspirations", {
   createdAt: integer("created_at").notNull(),
 }, (t) => [index("inspirations_brand").on(t.brandId)]);
 
+/** One row per AI call: what it was for, which model, tokens and cost. Feeds the usage history on Training. */
+export const aiUsage = sqliteTable("ai_usage", {
+  id: text("id").primaryKey(),
+  brandId: text("brand_id"),
+  source: text("source", { enum: ["live", "preview", "training", "import", "learning"] }).notNull(),
+  provider: text("provider").notNull(),
+  model: text("model").notNull(),
+  inputTokens: integer("input_tokens").notNull().default(0),
+  outputTokens: integer("output_tokens").notNull().default(0),
+  costUsd: real("cost_usd"),
+  costSource: text("cost_source", { enum: ["provider", "estimate"] }),
+  ms: integer("ms").notNull().default(0),
+  ok: integer("ok", { mode: "boolean" }).notNull(),
+  createdAt: integer("created_at").notNull(),
+}, (t) => [index("ai_usage_created").on(t.createdAt), index("ai_usage_brand").on(t.brandId)]);
+
 /** Fixed-window counters for rate limiting (login, draft generation, claims). */
 export const rateLimits = sqliteTable("rate_limits", {
   key: text("key").primaryKey(),
@@ -242,3 +258,4 @@ export type Memory = typeof memories.$inferSelect;
 export type Submission = typeof submissions.$inferSelect;
 export type Visit = typeof visits.$inferSelect;
 export type Inspiration = typeof inspirations.$inferSelect;
+export type AiUsageRow = typeof aiUsage.$inferSelect;

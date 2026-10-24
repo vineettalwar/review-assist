@@ -63,6 +63,7 @@ async function produce(
   variant: number,
   seed: string,
   corpus: string[],
+  source: "live" | "preview",
 ): Promise<{ text: string; model: string; uniq: Uniqueness }> {
   const s = ctx.settings;
   const extra = s?.systemPromptExtra?.trim();
@@ -90,7 +91,7 @@ async function produce(
     });
     if (extra) prompt.system += `\n\nAdditional instructions:\n${extra}`;
     const temperature = Math.min(1.2, (s?.temperature ?? 0.7) + attempt * 0.15);
-    const out = await complete(prompt, { temperature, maxTokens: s?.maxTokens ?? 400 });
+    const out = await complete(prompt, { temperature, maxTokens: s?.maxTokens ?? 400 }, { source, brandId: ctx.product.brandId });
     if (!out) break; // no provider or the call failed: fall through to the demo writer
     out.text = humanize(out.text);
     const uniq = checkUnique(out.text, corpus);
@@ -138,7 +139,7 @@ export async function generateDraft(req: DraftRequest): Promise<DraftResult> {
     return { text, model: "demo", cached: false };
   }
 
-  const out = await produce(ctx, { ...link, language: lang }, req.rating, req.length, req.variant, seed, corpus);
+  const out = await produce(ctx, { ...link, language: lang }, req.rating, req.length, req.variant, seed, corpus, "live");
   await storeDraft({ ...key, productId: link.productId, text: out.text, model: out.model });
   return { text: out.text, model: out.model, cached: false };
 }
@@ -147,8 +148,16 @@ export async function generateDraft(req: DraftRequest): Promise<DraftResult> {
  * One prompt for the Training page, so every model column gets identical input, plus the fallback
  * template draft customers would see without AI. Nothing is cached or stored.
  */
+/** The live system prompt plus the Settings extra instructions, exactly as customer drafts send it. */
+export function withExtra(system: string, extra: string) {
+  const e = extra.trim();
+  return e ? `${system}\n\nAdditional instructions:\n${e}` : system;
+}
+
 export async function trainingPrompt(req: PreviewRequest): Promise<{
+  /** System prompt without the Settings extra instructions (see `extra`); combine with withExtra(). */
   prompt: { system: string; user: string };
+  extra: string;
   fallback: string;
   temperature: number;
   maxTokens: number;
@@ -171,10 +180,9 @@ export async function trainingPrompt(req: PreviewRequest): Promise<{
     plan: planToPrompt(makePlan(seed, focusPool(ctx), corpus.slice(0, 20)), ctx.lang),
     usedOpenings: [...new Set(corpus.slice(0, 30).map(opening).filter(Boolean))].slice(0, 12),
   });
-  const extra = ctx.settings?.systemPromptExtra?.trim();
-  if (extra) prompt.system += `\n\nAdditional instructions:\n${extra}`;
+  const extra = ctx.settings?.systemPromptExtra?.trim() ?? "";
   const fallback = humanize(demoGenerate({ productName: ctx.product.name, rating: req.rating, highlights: ctx.highlights, length: req.length, seed, lang }));
-  return { prompt, fallback, temperature: ctx.settings?.temperature ?? 0.7, maxTokens: ctx.settings?.maxTokens ?? 400 };
+  return { prompt, extra, fallback, temperature: ctx.settings?.temperature ?? 0.7, maxTokens: ctx.settings?.maxTokens ?? 400 };
 }
 
 /** Playground preview for /admin/training. Never cached and never tied to a link, but still kept distinct from recent drafts. */
@@ -189,6 +197,7 @@ export async function previewDraft(req: PreviewRequest): Promise<DraftResult> {
     req.variant ?? 0,
     `preview:${crypto.randomUUID()}`,
     corpus,
+    "preview",
   );
   return { text: out.text, model: out.model, cached: false };
 }

@@ -4,9 +4,9 @@ import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
-import { getDb, examples, inspirations, products } from "@/db";
+import { getDb, examples, inspirations, products, settings } from "@/db";
 import { getActiveBrand } from "@/lib/brand";
-import { previewDraft, trainingPrompt, type DraftLength } from "@/lib/generation";
+import { previewDraft, trainingPrompt, withExtra, type DraftLength } from "@/lib/generation";
 import { completeWith, isProviderId, type ProviderId, type Usage } from "@/lib/ai";
 import { addMemories } from "@/lib/memory";
 import { qs } from "../flash";
@@ -73,11 +73,39 @@ async function ownedPreview(input: PreviewInput, brandId: string) {
 
 export type TrainingColumn = { provider: string; model: string };
 export type TrainingResult =
-  | { ok: true; text: string; provider: ProviderId; model: string; usage: Usage | null; ms: number }
-  | { ok: false; error: string; provider: string; model: string; ms: number };
-export type TrainingOutput = { ok: true; fallback: string; columns: TrainingResult[] } | { ok: false; error: string };
+  | { ok: true; text: string; provider: ProviderId; model: string; usage: Usage | null; ms: number; raw: unknown }
+  | { ok: false; error: string; provider: string; model: string; ms: number; raw: unknown };
+/** The editable request shown per column (the model is filled in per column). */
+export type TrainingRequest = { temperature: number; max_tokens: number; system: string; user: string; extra_instructions: string };
+export type TrainingOutput = { ok: true; fallback: string; request: TrainingRequest; columns: TrainingResult[] } | { ok: false; error: string };
 
 const MODEL_ID = /^[\w.:/-]{1,120}$/;
+const RAW_CAP = 20_000;
+
+/** Provider response for display, cut down when huge so it never bloats the page. */
+function capRaw(raw: unknown): unknown {
+  try {
+    const s = JSON.stringify(raw);
+    return s && s.length > RAW_CAP ? { truncated: true, preview: s.slice(0, RAW_CAP) } : raw;
+  } catch {
+    return null;
+  }
+}
+
+async function runOne(
+  c: TrainingColumn,
+  prompt: { system: string; user: string },
+  cfg: { temperature: number; maxTokens: number },
+  brandId: string,
+): Promise<TrainingResult> {
+  const model = String(c?.model ?? "").trim();
+  if (!isProviderId(c?.provider)) return { ok: false, error: "Pick a provider.", provider: String(c?.provider ?? ""), model, ms: 0, raw: null };
+  if (!MODEL_ID.test(model)) return { ok: false, error: "Enter a model name, e.g. openai/gpt-4o-mini.", provider: c.provider, model, ms: 0, raw: null };
+  const r = await completeWith({ provider: c.provider, model }, prompt, cfg, { source: "training", brandId });
+  return r.ok
+    ? { ok: true, text: r.text, provider: r.provider, model: r.model, usage: r.usage, ms: r.ms, raw: capRaw(r.raw) }
+    : { ...r, raw: capRaw(r.raw) };
+}
 
 /** Runs the same prompt on each chosen model (one attempt each, so the comparison is fair) and writes the fallback draft. */
 export async function runTraining(input: PreviewInput, columns: TrainingColumn[]): Promise<TrainingOutput> {
@@ -88,19 +116,80 @@ export async function runTraining(input: PreviewInput, columns: TrainingColumn[]
   const cols = (Array.isArray(columns) ? columns : []).slice(0, 2);
   try {
     const t = await trainingPrompt(req);
-    const results = await Promise.all(
-      cols.map(async (c): Promise<TrainingResult> => {
-        const model = String(c?.model ?? "").trim();
-        if (!isProviderId(c?.provider)) return { ok: false, error: "Pick a provider.", provider: String(c?.provider ?? ""), model, ms: 0 };
-        if (!MODEL_ID.test(model)) return { ok: false, error: "Enter a model name, e.g. openai/gpt-4o-mini.", provider: c.provider, model, ms: 0 };
-        const r = await completeWith({ provider: c.provider, model }, t.prompt, { temperature: t.temperature, maxTokens: t.maxTokens });
-        return r.ok ? { ok: true, text: r.text, provider: r.provider, model: r.model, usage: r.usage, ms: r.ms } : r;
-      }),
-    );
-    return { ok: true, fallback: t.fallback, columns: results };
+    const prompt = { system: withExtra(t.prompt.system, t.extra), user: t.prompt.user };
+    const results = await Promise.all(cols.map((c) => runOne(c, prompt, { temperature: t.temperature, maxTokens: t.maxTokens }, active.id)));
+    return {
+      ok: true,
+      fallback: t.fallback,
+      request: { temperature: t.temperature, max_tokens: t.maxTokens, system: t.prompt.system, user: t.prompt.user, extra_instructions: t.extra },
+      columns: results,
+    };
   } catch (e) {
     return { ok: false, error: e instanceof Error && e.message ? `Couldn't generate: ${e.message}` : "Couldn't generate. Try again." };
   }
+}
+
+const REQUEST_KEYS = ["model", "temperature", "max_tokens", "system", "user", "extra_instructions"];
+
+/** Validates the JSON edited on the Training page. Only these keys; keys and headers are never part of it. */
+function parseRequest(raw: string): { ok: true; model: string; temperature: number; maxTokens: number; system: string; user: string; extra: string } | { ok: false; error: string } {
+  let o: unknown;
+  try {
+    o = JSON.parse(raw);
+  } catch (e) {
+    return { ok: false, error: `That isn't valid JSON: ${e instanceof Error ? e.message : "parse error"}` };
+  }
+  if (!o || typeof o !== "object" || Array.isArray(o)) return { ok: false, error: "The request must be a JSON object." };
+  const r = o as Record<string, unknown>;
+  const unknown = Object.keys(r).filter((k) => !REQUEST_KEYS.includes(k));
+  if (unknown.length) return { ok: false, error: `Unknown field${unknown.length > 1 ? "s" : ""}: ${unknown.join(", ")}. Allowed: ${REQUEST_KEYS.join(", ")}.` };
+  const model = typeof r.model === "string" ? r.model.trim() : "";
+  if (!MODEL_ID.test(model)) return { ok: false, error: "\"model\" must be a model name, e.g. openai/gpt-4o-mini." };
+  const temperature = typeof r.temperature === "number" ? r.temperature : NaN;
+  if (!(temperature >= 0 && temperature <= 2)) return { ok: false, error: "\"temperature\" must be a number from 0 to 2." };
+  const maxTokens = typeof r.max_tokens === "number" ? r.max_tokens : NaN;
+  if (!Number.isInteger(maxTokens) || maxTokens < 1 || maxTokens > 4000) return { ok: false, error: "\"max_tokens\" must be a whole number from 1 to 4000." };
+  const text = (k: string, required: boolean) => {
+    const v = r[k];
+    if (v === undefined && !required) return "";
+    return typeof v === "string" && v.length <= 20_000 ? v : null;
+  };
+  const system = text("system", true);
+  const user = text("user", true);
+  const extra = text("extra_instructions", false);
+  if (system === null || !system.trim()) return { ok: false, error: "\"system\" must be text (up to 20,000 characters)." };
+  if (user === null || !user.trim()) return { ok: false, error: "\"user\" must be text (up to 20,000 characters)." };
+  if (extra === null) return { ok: false, error: "\"extra_instructions\" must be text (up to 20,000 characters)." };
+  return { ok: true, model, temperature, maxTokens, system, user, extra };
+}
+
+/** Sends exactly the edited request to one provider. Nothing reaches customers. */
+export async function runRawRequest(input: { provider: string; request: string }): Promise<{ ok: true; result: TrainingResult } | { ok: false; error: string }> {
+  await requireAdmin();
+  const active = await activeOrRedirect();
+  const p = parseRequest(String(input?.request ?? "").slice(0, 70_000));
+  if (!p.ok) return p;
+  const result = await runOne(
+    { provider: String(input?.provider ?? ""), model: p.model },
+    { system: withExtra(p.system, p.extra), user: p.user },
+    { temperature: p.temperature, maxTokens: p.maxTokens },
+    active.id,
+  );
+  return { ok: true, result };
+}
+
+/** Makes edited extra instructions the default for every customer draft (Settings are shared by all brands). */
+export async function saveDefaultExtra(text: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requireAdmin();
+  const extra = String(text ?? "").trim();
+  if (extra.length > 4000) return { ok: false, error: "Keep extra instructions under 4,000 characters." };
+  const db = await getDb();
+  const [s] = await db.select({ id: settings.id }).from(settings).where(eq(settings.id, "default")).limit(1);
+  if (s) await db.update(settings).set({ systemPromptExtra: extra }).where(eq(settings.id, "default"));
+  else await db.insert(settings).values({ id: "default", systemPromptExtra: extra });
+  revalidatePath("/admin/settings");
+  revalidatePath("/admin/training");
+  return { ok: true };
 }
 
 type Scope = { productId: string | null; scope: "brand" | "product" };

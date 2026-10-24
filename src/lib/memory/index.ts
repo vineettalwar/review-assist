@@ -95,8 +95,8 @@ export async function updateMemoryText(brandId: string, id: string, text: string
     .where(and(eq(memories.id, id), eq(memories.brandId, brandId)));
 }
 
-async function modelCall(system: string, user: string): Promise<string | null> {
-  return (await complete({ system, user }, { temperature: 0.2, maxTokens: 600, timeoutMs: 30_000 }))?.text ?? null;
+async function modelCall(system: string, user: string, brandId: string): Promise<string | null> {
+  return (await complete({ system, user }, { temperature: 0.2, maxTokens: 600, timeoutMs: 30_000 }, { source: "learning", brandId }))?.text ?? null;
 }
 
 const LESSON_FORMAT = `Reply with STRICT JSON only, no prose: an array of {"kind":"style"|"avoid"|"fact","text":"..."}.
@@ -121,6 +121,7 @@ export async function proposeFromEdit(args: {
   const raw = await modelCall(
     `You study how a business owner edits AI-written customer review drafts, to learn lasting preferences. Return 0 to 3 lessons.\n${LESSON_FORMAT}`,
     `ORIGINAL DRAFT:\n${args.original.slice(0, 1500)}\n\nEDITED VERSION:\n${args.edited.slice(0, 1500)}`,
+    args.brandId,
   );
   const lessons = parseLessons(raw, 3);
   if (!lessons.length) return [];
@@ -157,6 +158,7 @@ export async function learnFromSubmissions(brandId: string): Promise<{ proposed:
   const raw = await modelCall(
     `You study how customers edit AI-drafted reviews before posting, to find RECURRING patterns across customers.\nOnly report a pattern supported by at least 2 different edits. Return 0 to 5 lessons.\n${LESSON_FORMAT}`,
     `Each line is "draft → final text the customer posted":\n${diffs}`,
+    brandId,
   );
   // No key (or call failed with null): do not mark rows as learned.
   if (raw === null) return { proposed: [], read: 0 };

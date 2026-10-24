@@ -1,6 +1,6 @@
 // The one place the app talks to an AI model. Callers get text or null (null = fall back to demo/basic).
 import { eq } from "drizzle-orm";
-import { aiProviders, getDb, settings, type AiProviderRow } from "@/db";
+import { aiProviders, aiUsage, getDb, settings, type AiProviderRow, type AiUsageRow } from "@/db";
 import { getEnv, type AppEnv } from "@/lib/env";
 import { decryptSecret, encryptSecret } from "./crypto";
 import { PROVIDERS, PROVIDER_ORDER, callProvider, isProviderId, type CallResult, type ProviderId, type Usage } from "./providers";
@@ -97,6 +97,35 @@ async function recordResult(id: ProviderId, r: CallResult, prev?: Pick<AiProvide
   await db.update(aiProviders).set({ status, lastError, testedAt: Date.now() }).where(eq(aiProviders.id, id));
 }
 
+/** What a call was for; recorded with its usage. */
+export interface UsageMeta {
+  source: AiUsageRow["source"];
+  brandId?: string | null;
+}
+
+/** One usage row per call. Never throws: tracking must not break a customer's draft. */
+async function recordUsage(meta: UsageMeta | undefined, provider: ProviderId, model: string, r: CallResult, ms: number) {
+  if (!meta) return;
+  try {
+    const u = r.ok ? r.usage : undefined;
+    const db = await getDb();
+    await db.insert(aiUsage).values({
+      id: crypto.randomUUID(),
+      brandId: meta.brandId ?? null,
+      source: meta.source,
+      provider,
+      model: model.slice(0, 120),
+      inputTokens: u?.input ?? 0,
+      outputTokens: u?.output ?? 0,
+      costUsd: u?.costUsd ?? null,
+      costSource: u?.costSource ?? null,
+      ms,
+      ok: r.ok,
+      createdAt: Date.now(),
+    });
+  } catch {}
+}
+
 /**
  * Run a prompt on the active provider. Returns null when nothing is connected or the call fails,
  * so every caller keeps its non-AI fallback.
@@ -104,10 +133,13 @@ async function recordResult(id: ProviderId, r: CallResult, prev?: Pick<AiProvide
 export async function complete(
   prompt: { system: string; user: string },
   cfg: { temperature: number; maxTokens: number; timeoutMs?: number },
+  meta?: UsageMeta,
 ): Promise<{ text: string; provider: ProviderId; model: string } | null> {
   const ai = await resolve();
   if (!ai) return null;
+  const t0 = Date.now();
   const r = await callProvider(ai.id, ai.key, prompt, { ...cfg, model: ai.model, appUrl: ai.env.APP_URL });
+  await recordUsage(meta, ai.id, ai.model, r, Date.now() - t0);
   if (ai.fromSettings) {
     const db = await getDb();
     const [row] = await db.select({ status: aiProviders.status, lastError: aiProviders.lastError }).from(aiProviders).where(eq(aiProviders.id, ai.id));
@@ -117,8 +149,8 @@ export async function complete(
 }
 
 export type CompleteWithResult =
-  | { ok: true; text: string; usage: Usage | null; ms: number; provider: ProviderId; model: string }
-  | { ok: false; error: string; ms: number; provider: ProviderId; model: string };
+  | { ok: true; text: string; usage: Usage | null; ms: number; provider: ProviderId; model: string; raw: unknown }
+  | { ok: false; error: string; ms: number; provider: ProviderId; model: string; raw: unknown };
 
 /**
  * Run a prompt on a specific provider and model (the Training page compares two side by side).
@@ -128,15 +160,62 @@ export async function completeWith(
   target: { provider: ProviderId; model: string },
   prompt: { system: string; user: string },
   cfg: { temperature: number; maxTokens: number; timeoutMs?: number },
+  meta?: UsageMeta,
 ): Promise<CompleteWithResult> {
   const { provider, model } = target;
   const { rows, env } = await load();
   const k = await readKey(env, rows.find((r) => r.id === provider), provider);
-  if (!k) return { ok: false, error: `No ${PROVIDERS[provider].label} key is connected.`, ms: 0, provider, model };
+  if (!k) return { ok: false, error: `No ${PROVIDERS[provider].label} key is connected.`, ms: 0, provider, model, raw: null };
   const t0 = Date.now();
   const r = await callProvider(provider, k.key, prompt, { ...cfg, model, appUrl: env.APP_URL });
   const ms = Date.now() - t0;
-  return r.ok ? { ok: true, text: r.text, usage: r.usage ?? null, ms, provider, model } : { ok: false, error: r.error, ms, provider, model };
+  await recordUsage(meta, provider, model, r, ms);
+  return r.ok
+    ? { ok: true, text: r.text, usage: r.usage ?? null, ms, provider, model, raw: r.raw ?? null }
+    : { ok: false, error: r.error, ms, provider, model, raw: r.raw ?? null };
+}
+
+export interface OpenRouterBalance {
+  connected: boolean;
+  /** USD. Each is null when OpenRouter didn't return it. */
+  keyLimit: number | null;
+  keyRemaining: number | null;
+  keyUsage: number | null;
+  accountCredits: number | null;
+  accountUsage: number | null;
+  error: string;
+}
+
+/** Credits for the connected OpenRouter key and account. Server-only; the key never leaves this module. */
+export async function openRouterBalance(): Promise<OpenRouterBalance> {
+  const empty = { keyLimit: null, keyRemaining: null, keyUsage: null, accountCredits: null, accountUsage: null };
+  const { rows, env } = await load();
+  const k = await readKey(env, rows.find((r) => r.id === "openrouter"), "openrouter");
+  if (!k) return { connected: false, ...empty, error: "" };
+  const get = async (path: string) => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8_000);
+    try {
+      const res = await fetch(`https://openrouter.ai/api/v1/${path}`, { headers: { Authorization: `Bearer ${k.key}` }, signal: ctrl.signal });
+      const json = (await res.json().catch(() => null)) as { data?: Record<string, unknown> } | null;
+      return res.ok ? (json?.data ?? null) : null;
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+  const [key, credits] = await Promise.all([get("key"), get("credits")]);
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+  return {
+    connected: true,
+    keyLimit: num(key?.limit),
+    keyRemaining: num(key?.limit_remaining),
+    keyUsage: num(key?.usage),
+    accountCredits: num(credits?.total_credits),
+    accountUsage: num(credits?.total_usage),
+    error: !key && !credits ? "OpenRouter didn't return balance details for this key." : "",
+  };
 }
 
 /** A tiny real request, used before saving a key and by the Test button. */
